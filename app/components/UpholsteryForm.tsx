@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { supabase } from "../lib/supabase";
 import type { UpholsteryOrder } from "../lib/supabase";
+import { useAuth } from "../contexts/AuthContext";
 
 // Helper function to convert camelCase to snake_case
 function toSnakeCase(
@@ -27,6 +28,7 @@ export default function UpholsteryForm({
   onOrderSubmitted,
   preset,
 }: UpholsteryFormProps) {
+  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -81,8 +83,12 @@ export default function UpholsteryForm({
       // Remove presetName field before submitting
       const { presetName, ...orderData } = data;
 
-      // Convert camelCase to snake_case
-      const snakeCaseData = toSnakeCase(orderData);
+      // Convert camelCase to snake_case and add user_id if authenticated
+      const snakeCaseData = {
+        ...toSnakeCase(orderData),
+        ...(user ? { user_id: user.id } : {}),
+      };
+
       console.log("Submitting data:", snakeCaseData);
 
       const { error } = await supabase
@@ -90,10 +96,7 @@ export default function UpholsteryForm({
         .insert([snakeCaseData])
         .select();
 
-      if (error) {
-        console.error("Supabase error details:", error);
-        throw error;
-      }
+      if (error) throw error;
 
       if (onOrderSubmitted) {
         onOrderSubmitted(data);
