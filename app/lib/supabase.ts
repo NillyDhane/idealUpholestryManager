@@ -1,7 +1,16 @@
 import { createClient } from "@supabase/supabase-js";
+import { config } from "dotenv";
+import { resolve } from "path";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+// Load environment variables from .env.local
+config({ path: resolve(process.cwd(), ".env.local") });
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error("Missing Supabase environment variables");
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   db: {
@@ -18,6 +27,7 @@ export type UpholsteryOrder = {
   createdAt?: string;
   vanNumber: string;
   model: string;
+  modelType?: string;
   orderDate: string;
   brandOfSample: string;
   colorOfSample: string;
@@ -37,4 +47,9 @@ export type UpholsteryOrder = {
   stitching: "Contrast" | "Single" | "Double" | "Same Colour";
   bunkMattresses: "None" | "2" | "3";
   presetName?: string;
+  layoutId?: string;
+  layoutWidth?: string;
+  layoutLength?: string;
+  layoutName?: string;
+  layoutImageUrl?: string;
 };

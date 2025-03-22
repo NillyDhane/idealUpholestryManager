@@ -8,6 +8,7 @@ import {
   View,
   StyleSheet,
   PDFDownloadLink,
+  Image,
 } from "@react-pdf/renderer";
 import type { UpholsteryOrder } from "../lib/supabase";
 
@@ -64,6 +65,19 @@ const styles = StyleSheet.create({
     right: 30,
     textAlign: "center",
     fontSize: 8,
+    color: "#666666",
+  },
+  layoutImage: {
+    width: "100%",
+    height: 300,
+    marginVertical: 10,
+    objectFit: "contain",
+    backgroundColor: "#f8fafc",
+    borderRadius: 4,
+  },
+  layoutDetails: {
+    marginTop: 5,
+    fontSize: 10,
     color: "#666666",
   },
 });
@@ -180,6 +194,43 @@ const OrderPDF = ({ order }: { order: UpholsteryOrder }) => (
           <Text style={styles.value}>{order.bunkMattresses}</Text>
         </View>
       </View>
+
+      {/* Upholstery Layout Section */}
+      {order.layoutImageUrl && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Upholstery Layout</Text>
+
+          {/* Ensure the image URL is absolute */}
+          <Image
+            src={{ uri: order.layoutImageUrl }}
+            style={styles.layoutImage}
+          />
+
+          <View style={styles.layoutDetails}>
+            {order.layoutName && (
+              <View style={styles.row}>
+                <Text style={styles.label}>Layout Name:</Text>
+                <Text style={styles.value}>
+                  {order.layoutName.replace(/\.[^/.]+$/, "")}{" "}
+                  {/* Remove file extension */}
+                </Text>
+              </View>
+            )}
+            {order.layoutWidth && (
+              <View style={styles.row}>
+                <Text style={styles.label}>Width:</Text>
+                <Text style={styles.value}>{order.layoutWidth}mm</Text>
+              </View>
+            )}
+            {order.layoutLength && (
+              <View style={styles.row}>
+                <Text style={styles.label}>Length:</Text>
+                <Text style={styles.value}>{order.layoutLength}mm</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      )}
 
       <Text style={styles.footer}>
         Generated on {new Date().toLocaleDateString("en-GB")}

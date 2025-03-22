@@ -1,23 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { supabase } from "../lib/supabase";
 import type { UpholsteryOrder } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
-
-// Helper function to convert camelCase to snake_case
-function toSnakeCase(
-  obj: Partial<UpholsteryOrder>
-): Record<string, string | boolean | undefined> {
-  const snakeCase = (str: string) =>
-    str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-
-  return Object.keys(obj).reduce((acc, key) => {
-    acc[snakeCase(key)] = obj[key as keyof Partial<UpholsteryOrder>];
-    return acc;
-  }, {} as Record<string, string | boolean | undefined>);
-}
+import { models } from "../lib/modelData";
+import { brands } from "../lib/brandData";
+import UpholsteryLayout from "./UpholsteryLayout";
+import type { StorageLayout } from "../lib/storage";
 
 interface UpholsteryFormProps {
   onOrderSubmitted?: (order: UpholsteryOrder) => void;
@@ -31,16 +22,25 @@ export default function UpholsteryForm({
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [selectedModel, setSelectedModel] = useState<string>("");
+  const [selectedBrand, setSelectedBrand] = useState<string>("");
+  const [selectedLayout, setSelectedLayout] = useState<StorageLayout | null>(
+    null
+  );
+  const [presetLayout, setPresetLayout] = useState<StorageLayout | null>(null);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
+    watch,
+    setValue,
   } = useForm<UpholsteryOrder>({
     defaultValues: {
       vanNumber: "",
       model: "",
+      modelType: "",
       orderDate: new Date().toISOString().split("T")[0],
       brandOfSample: "",
       colorOfSample: "",
@@ -55,68 +55,214 @@ export default function UpholsteryForm({
       curtain: "Yes",
       stitching: "Contrast",
       bunkMattresses: "None",
+      layoutId: "",
+      layoutWidth: "",
+      layoutLength: "",
+      layoutName: "",
+      layoutImageUrl: "",
     },
+    mode: "onBlur",
   });
+
+  // Watch for changes in the model and brand fields
+  const watchModel = watch("model");
+  const watchBrand = watch("brandOfSample");
 
   // Effect to update form when preset changes
   useEffect(() => {
     if (preset) {
+      console.log("Loading preset:", preset);
+
+      // Reset form with preset values
       reset({
         ...preset,
-        orderDate: new Date().toISOString().split("T")[0], // Always use current date
-        curtain: "Yes", // Force curtain to "Yes" even when loading a preset
+        orderDate: new Date().toISOString().split("T")[0],
+        // Ensure modelType is properly set
+        modelType: preset.modelType || "",
+        // Explicitly set layout fields
+        layoutId: preset.layoutId || "",
+        layoutName: preset.layoutName || "",
+        layoutImageUrl: preset.layoutImageUrl || "",
+        layoutWidth: preset.layoutWidth || "",
+        layoutLength: preset.layoutLength || "",
       });
+
+      // Set preset layout if available
+      if (preset.layoutId && preset.layoutName && preset.layoutImageUrl) {
+        console.log("Setting preset layout:", {
+          layoutId: preset.layoutId,
+          layoutName: preset.layoutName,
+          layoutImageUrl: preset.layoutImageUrl,
+        });
+
+        const layout: StorageLayout = {
+          path: preset.layoutId,
+          name: preset.layoutName,
+          url: preset.layoutImageUrl,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        setPresetLayout(layout);
+        setSelectedLayout(layout);
+      } else {
+        console.log("No layout found in preset:", preset);
+      }
+
+      // Set other form fields
+      setSelectedModel(preset.model || "");
+      setSelectedBrand(preset.brandOfSample || "");
     }
   }, [preset, reset]);
 
-  const onSubmit = async (data: UpholsteryOrder) => {
+  // Effect to handle model changes
+  useEffect(() => {
+    if (watchModel !== selectedModel) {
+      setSelectedModel(watchModel);
+      setValue("modelType", "");
+    }
+  }, [watchModel, selectedModel, setValue]);
+
+  // Effect to handle brand changes
+  useEffect(() => {
+    if (watchBrand !== selectedBrand) {
+      setSelectedBrand(watchBrand);
+      setValue("colorOfSample", "");
+    }
+  }, [watchBrand, selectedBrand, setValue]);
+
+  // Get available model types for the selected model
+  const modelTypes = useMemo(() => {
+    const selectedModelData = models.find((m) => m.name === watchModel);
+    return (
+      selectedModelData?.types.map((type) => `${type.name} - (${type.code})`) ||
+      []
+    );
+  }, [watchModel]);
+
+  // Get available colors for the selected brand
+  const availableColors =
+    brands.find((b) => b.name === selectedBrand)?.colors || [];
+
+  const handleLayoutSelect = (layout: StorageLayout) => {
+    setSelectedLayout(layout);
+    setValue("layoutId", layout.path);
+    setValue("layoutName", layout.name);
+    setValue("layoutImageUrl", layout.url);
+  };
+
+  const onSubmit = async (
+    data: UpholsteryOrder,
+    e?: React.BaseSyntheticEvent
+  ) => {
+    if (e) {
+      e.preventDefault();
+    }
     setIsSubmitting(true);
     setErrorMessage("");
 
     try {
+      console.log("Form data received:", data);
+
+      // Validate required fields
+      const requiredFields = {
+        vanNumber: "Van number",
+        model: "Model",
+        modelType: "Model type",
+        brandOfSample: "Brand",
+        colorOfSample: "Color",
+      };
+
+      // Check all required fields
+      for (const [field, label] of Object.entries(requiredFields)) {
+        if (!data[field as keyof UpholsteryOrder]) {
+          throw new Error(`${label} is required`);
+        }
+      }
+
+      // Check if layout is selected
+      if (!selectedLayout) {
+        throw new Error("Please select a layout");
+      }
+
+      // Validate and convert van number
+      const vanNumberStr = String(data.vanNumber).trim();
+      if (!vanNumberStr) {
+        throw new Error("Please enter a valid van number");
+      }
+
+      const vanNumberInt = parseInt(vanNumberStr, 10);
+      if (isNaN(vanNumberInt) || vanNumberInt <= 0) {
+        throw new Error("Please enter a valid positive van number");
+      }
+
       // Add current time to the order date
       const now = new Date();
       const orderDateTime = new Date(data.orderDate);
       orderDateTime.setHours(now.getHours(), now.getMinutes());
       data.orderDate = orderDateTime.toISOString();
 
-      // Remove presetName field before submitting
-      const { presetName, ...orderData } = data;
-
-      // Convert camelCase to snake_case and add user_id if authenticated
-      const snakeCaseData = {
-        ...toSnakeCase(orderData),
+      // Prepare data for submission
+      const submissionData = {
+        van_number: vanNumberInt,
+        model: data.model,
+        model_type: data.modelType?.split(" - ")[0] || "",
+        order_date: data.orderDate,
+        brand_of_sample: data.brandOfSample,
+        color_of_sample: data.colorOfSample,
+        bed_head: data.bedHead,
+        arms: data.arms,
+        base: data.base || "",
+        mag_pockets: data.magPockets,
+        head_bumper: data.headBumper,
+        other: data.other || "",
+        lounge_type: data.loungeType,
+        design: data.design,
+        curtain: data.curtain,
+        stitching: data.stitching,
+        bunk_mattresses: data.bunkMattresses,
+        layout_id: selectedLayout.path,
+        layout_name: selectedLayout.name,
+        layout_image_url: selectedLayout.url,
         ...(user ? { user_id: user.id } : {}),
       };
 
-      console.log("Submitting data:", snakeCaseData);
+      console.log("Submitting data to Supabase:", submissionData);
 
-      const { error } = await supabase
+      const { data: insertedData, error } = await supabase
         .from("upholstery_orders")
-        .insert([snakeCaseData])
+        .insert([submissionData])
         .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error details:", {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+        });
+        throw new Error(error.message || "Failed to submit order");
+      }
+
+      if (!insertedData?.[0]) {
+        throw new Error("No data returned from insert operation");
+      }
+
+      console.log("Successfully inserted data:", insertedData[0]);
 
       if (onOrderSubmitted) {
         onOrderSubmitted(data);
       }
     } catch (error: unknown) {
-      const err = error as {
-        message?: string;
-        details?: string;
-        hint?: string;
-        code?: string;
-      };
-      console.error("Error submitting order:", {
-        message: err.message,
-        details: err.details,
-        hint: err.hint,
-        code: err.code,
-      });
-      setErrorMessage(
-        `Failed to submit order: ${err.message || "Unknown error"}`
-      );
+      console.error("Error submitting order:", error);
+
+      if (error instanceof Error) {
+        setErrorMessage(`Failed to submit order: ${error.message}`);
+      } else {
+        setErrorMessage(
+          "An unexpected error occurred while submitting the order"
+        );
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -128,7 +274,15 @@ export default function UpholsteryForm({
         Ideal Caravans Upholstery Order Form
       </h1>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+      <form
+        onSubmit={handleSubmit(onSubmit, (errors) => {
+          console.log("Form validation errors:", errors);
+          if (errors.layoutId) {
+            setErrorMessage("Please select a layout");
+          }
+        })}
+        className="space-y-8"
+      >
         {/* Basic Information Section */}
         <section className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
           <h2 className="text-xl font-semibold mb-4 border-b pb-2 text-gray-900 dark:text-white">
@@ -148,23 +302,9 @@ export default function UpholsteryForm({
                 </span>
                 <input
                   id="vanNumber"
-                  type="number"
-                  onKeyDown={(e) => {
-                    // Allow only numbers, backspace, delete, tab, enter, arrows
-                    if (
-                      !/^\d$/.test(e.key) && // not a number
-                      ![
-                        "Backspace",
-                        "Delete",
-                        "Tab",
-                        "Enter",
-                        "ArrowLeft",
-                        "ArrowRight",
-                      ].includes(e.key)
-                    ) {
-                      e.preventDefault();
-                    }
-                  }}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   className={`w-full h-[42px] px-3 py-2 border ${
                     errors.vanNumber
                       ? "border-red-500"
@@ -173,8 +313,17 @@ export default function UpholsteryForm({
                   {...register("vanNumber", {
                     required: "Van Number is required",
                     pattern: {
-                      value: /^\d+$/,
+                      value: /^[0-9]+$/,
                       message: "Please enter numbers only",
+                    },
+                    validate: {
+                      isPositiveNumber: (value) => {
+                        if (!value || value.trim() === "") {
+                          return "Van Number is required";
+                        }
+                        const num = parseInt(value, 10);
+                        return num > 0 || "Please enter a positive number";
+                      },
                     },
                   })}
                 />
@@ -193,30 +342,62 @@ export default function UpholsteryForm({
               >
                 Model
               </label>
-              <input
+              <select
                 id="model"
-                type="text"
                 className={`w-full px-3 py-2 border ${
                   errors.model
                     ? "border-red-500"
                     : "border-gray-300 dark:border-gray-500"
                 } rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
-                placeholder="Please enter Model Type"
-                {...register("model", {
-                  required: "Model is required",
-                  pattern: {
-                    value: /^(?=.*[a-zA-Z])[\w\s.]+$/,
-                    message:
-                      "Model must contain letters and can include numbers",
-                  },
-                })}
-              />
+                {...register("model", { required: "Model is required" })}
+              >
+                <option value="">Select a Model</option>
+                {models.map((model) => (
+                  <option key={model.name} value={model.name}>
+                    {model.name}
+                  </option>
+                ))}
+              </select>
               {errors.model && (
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">
                   {errors.model.message}
                 </p>
               )}
             </div>
+
+            {selectedModel && (
+              <div>
+                <label
+                  htmlFor="modelType"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1"
+                >
+                  Model Type
+                </label>
+                <select
+                  id="modelType"
+                  className={`w-full px-3 py-2 border ${
+                    errors.modelType
+                      ? "border-red-500"
+                      : "border-gray-300 dark:border-gray-500"
+                  } rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
+                  {...register("modelType", {
+                    required: "Model Type is required",
+                  })}
+                >
+                  <option value="">Select a Model Type</option>
+                  {modelTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+                {errors.modelType && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {errors.modelType.message}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div>
               <label
@@ -240,38 +421,24 @@ export default function UpholsteryForm({
               >
                 Brand of Sample
               </label>
-              <input
+              <select
                 id="brandOfSample"
-                type="text"
-                onKeyDown={(e) => {
-                  // Allow only letters, space, backspace, delete, tab, enter, arrows
-                  if (
-                    !/^[A-Za-z\s]$/.test(e.key) && // not a letter or space
-                    ![
-                      "Backspace",
-                      "Delete",
-                      "Tab",
-                      "Enter",
-                      "ArrowLeft",
-                      "ArrowRight",
-                    ].includes(e.key)
-                  ) {
-                    e.preventDefault();
-                  }
-                }}
                 className={`w-full px-3 py-2 border ${
                   errors.brandOfSample
                     ? "border-red-500"
                     : "border-gray-300 dark:border-gray-500"
                 } rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
                 {...register("brandOfSample", {
-                  required: "Brand of Sample is required",
-                  pattern: {
-                    value: /^[A-Za-z\s]+$/,
-                    message: "Please enter letters only",
-                  },
+                  required: "Brand is required",
                 })}
-              />
+              >
+                <option value="">Select a Brand</option>
+                {brands.map((brand) => (
+                  <option key={brand.name} value={brand.name}>
+                    {brand.name}
+                  </option>
+                ))}
+              </select>
               {errors.brandOfSample && (
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">
                   {errors.brandOfSample.message}
@@ -279,51 +446,39 @@ export default function UpholsteryForm({
               )}
             </div>
 
-            <div>
-              <label
-                htmlFor="colorOfSample"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1"
-              >
-                Color of Sample
-              </label>
-              <input
-                id="colorOfSample"
-                type="text"
-                onKeyDown={(e) => {
-                  // Allow only letters, space, backspace, delete, tab, enter, arrows
-                  if (
-                    !/^[A-Za-z\s]$/.test(e.key) && // not a letter or space
-                    ![
-                      "Backspace",
-                      "Delete",
-                      "Tab",
-                      "Enter",
-                      "ArrowLeft",
-                      "ArrowRight",
-                    ].includes(e.key)
-                  ) {
-                    e.preventDefault();
-                  }
-                }}
-                className={`w-full px-3 py-2 border ${
-                  errors.colorOfSample
-                    ? "border-red-500"
-                    : "border-gray-300 dark:border-gray-500"
-                } rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
-                {...register("colorOfSample", {
-                  required: "Color of Sample is required",
-                  pattern: {
-                    value: /^[A-Za-z\s]+$/,
-                    message: "Please enter letters only",
-                  },
-                })}
-              />
-              {errors.colorOfSample && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                  {errors.colorOfSample.message}
-                </p>
-              )}
-            </div>
+            {selectedBrand && (
+              <div>
+                <label
+                  htmlFor="colorOfSample"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1"
+                >
+                  Color of Sample
+                </label>
+                <select
+                  id="colorOfSample"
+                  className={`w-full px-3 py-2 border ${
+                    errors.colorOfSample
+                      ? "border-red-500"
+                      : "border-gray-300 dark:border-gray-500"
+                  } rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
+                  {...register("colorOfSample", {
+                    required: "Color is required",
+                  })}
+                >
+                  <option value="">Select a Color</option>
+                  {availableColors.map((color) => (
+                    <option key={color} value={color}>
+                      {color}
+                    </option>
+                  ))}
+                </select>
+                {errors.colorOfSample && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {errors.colorOfSample.message}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </section>
 
@@ -540,6 +695,20 @@ export default function UpholsteryForm({
               </select>
             </div>
           </div>
+        </section>
+
+        {/* Upholstery Layout Section */}
+        <section className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg animate-fade-in">
+          <UpholsteryLayout
+            onLayoutSelect={handleLayoutSelect}
+            selectedLayout={selectedLayout}
+            hideGrid={!!presetLayout}
+          />
+          {errors.layoutId && (
+            <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+              Please select an upholstery layout
+            </p>
+          )}
         </section>
 
         {/* Submit Button */}

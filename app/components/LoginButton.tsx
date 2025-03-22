@@ -19,9 +19,14 @@ export default function LoginButton() {
   if (user) {
     return (
       <div className="flex items-center gap-3">
-        <span className="text-sm text-gray-600 dark:text-gray-300 hidden sm:inline">
-          {user.email}
-        </span>
+        <div className="flex flex-col items-end">
+          <span className="text-sm text-gray-600 dark:text-gray-300 hidden sm:inline">
+            {user.email}
+          </span>
+          <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">
+            ID: {user.id}
+          </span>
+        </div>
         <button
           onClick={() => signOut()}
           className="px-3 py-1.5 bg-red-500 text-white text-sm rounded-md hover:bg-red-600 transition-colors"

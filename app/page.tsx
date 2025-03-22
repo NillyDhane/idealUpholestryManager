@@ -8,6 +8,7 @@ import LoginButton from "./components/LoginButton";
 import { supabase } from "./lib/supabase";
 import type { UpholsteryOrder } from "./lib/supabase";
 import { useAuth } from "./contexts/AuthContext";
+import AdminLayoutManager from "./components/AdminLayoutManager";
 
 export default function Home() {
   const { user, isLoading } = useAuth();
@@ -67,13 +68,63 @@ export default function Home() {
     }
 
     try {
+      // Validate van number
+      const vanNumberStr = String(activeOrder.vanNumber).trim();
+      if (!vanNumberStr) {
+        throw new Error("Van number is required");
+      }
+
+      const vanNumberInt = parseInt(vanNumberStr, 10);
+      if (isNaN(vanNumberInt) || vanNumberInt <= 0) {
+        throw new Error("Please enter a valid positive van number");
+      }
+
+      // Validate model type before splitting
+      if (!activeOrder.modelType) {
+        throw new Error("Please select a model type");
+      }
+
+      // Get the model type name (everything before the code in parentheses)
+      const modelType = activeOrder.modelType.split(" - ")[0];
+      if (!modelType) {
+        throw new Error("Invalid model type format");
+      }
+
+      // Validate brand and color
+      if (activeOrder.brandOfSample !== "Shann") {
+        throw new Error("Invalid brand selection");
+      }
+
+      const validColors = [
+        "Bison",
+        "Cashmere",
+        "Cement",
+        "Cherry",
+        "Cigar",
+        "Clay",
+        "Flint",
+        "Glacier",
+        "Mahogany",
+        "Maize",
+        "Metal",
+        "Oasis",
+        "Vanilla",
+        "Volcano",
+        "Zodiac",
+      ];
+
+      if (!validColors.includes(activeOrder.colorOfSample)) {
+        throw new Error("Invalid color selection");
+      }
+
       // Convert camelCase to snake_case for database
       const presetData = {
         preset_name: presetName,
-        van_number: activeOrder.vanNumber,
+        van_number: vanNumberStr, // Use the string version as per schema
         model: activeOrder.model,
+        model_type: modelType,
         order_date: new Date().toISOString().split("T")[0],
-        brand_of_sample: activeOrder.brandOfSample,
+        brand_of_sample: activeOrder.brandOfSample as "Shann",
         color_of_sample: activeOrder.colorOfSample,
         bed_head: activeOrder.bedHead,
         arms: activeOrder.arms,
@@ -86,12 +137,63 @@ export default function Home() {
         curtain: activeOrder.curtain,
         stitching: activeOrder.stitching,
         bunk_mattresses: activeOrder.bunkMattresses,
+        // Layout fields - match exactly with database schema
+        layout_id: activeOrder.layoutId || "",
+        layout_name: activeOrder.layoutName || "",
+        layout_image_url: activeOrder.layoutImageUrl || "",
+        layout_width: activeOrder.layoutWidth || "",
+        layout_length: activeOrder.layoutLength || "",
         user_id: user?.id,
       };
 
-      const { error } = await supabase
-        .from("upholstery_presets")
-        .insert([presetData]);
+      // Validate required fields
+      const requiredFields = {
+        model: "Model",
+        model_type: "Model type",
+        brand_of_sample: "Brand",
+        color_of_sample: "Color",
+      };
+
+      // Check all required fields
+      for (const [field, label] of Object.entries(requiredFields)) {
+        if (!presetData[field as keyof typeof presetData]) {
+          throw new Error(`${label} is required`);
+        }
+      }
+
+      // Validate layout fields
+      if (
+        !presetData.layout_id ||
+        !presetData.layout_name ||
+        !presetData.layout_image_url
+      ) {
+        throw new Error("Layout selection is required");
+      }
+
+      // Log the data being sent to help debug
+      console.log("Saving preset with data:", {
+        ...presetData,
+        layout_fields: {
+          id: presetData.layout_id,
+          name: presetData.layout_name,
+          image_url: presetData.layout_image_url,
+          width: presetData.layout_width,
+          length: presetData.layout_length,
+        },
+      });
+
+      const { error } = await supabase.from("upholstery_presets").insert([
+        {
+          ...presetData,
+          // Ensure all fields are properly typed
+          van_number: String(presetData.van_number),
+          layout_id: presetData.layout_id || null,
+          layout_name: presetData.layout_name || null,
+          layout_image_url: presetData.layout_image_url || null,
+          layout_width: presetData.layout_width || null,
+          layout_length: presetData.layout_length || null,
+        },
+      ]);
 
       if (error) throw error;
 
@@ -108,7 +210,7 @@ export default function Home() {
     } catch (error: unknown) {
       const err = error as { message: string };
       console.error("Error saving preset:", err.message);
-      setNotification("Failed to save preset. Please try again.");
+      setNotification(`Failed to save preset: ${err.message}`);
       setTimeout(() => setNotification(null), 5000);
     }
   };
@@ -130,11 +232,11 @@ export default function Home() {
       {/* Header with Login Button */}
       <div className="max-w-6xl mx-auto mb-8">
         {/* Login Button in absolute position */}
-        <div className="absolute top-8 right-8">
+        <div className="absolute top-8 right-8 animate-fade-in-down">
           <LoginButton />
         </div>
         {/* Centered Title */}
-        <h1 className="text-4xl font-bold text-center text-gray-900 dark:text-white">
+        <h1 className="text-4xl font-bold text-center text-gray-900 dark:text-white animate-fade-in-down">
           Ideal Caravans Upholstery
         </h1>
       </div>
@@ -153,8 +255,17 @@ export default function Home() {
           )}
 
           <div ref={topRef} className="max-w-6xl mx-auto">
+            {/* Admin Layout Manager - Only visible to admin users */}
+            <AdminLayoutManager
+              onLayoutChange={() => {
+                // Optionally refresh layouts or show notification
+                setNotification("Layout updated successfully!");
+                setTimeout(() => setNotification(null), 5000);
+              }}
+            />
+
             {/* Header */}
-            <div className="text-center mb-10">
+            <div className="text-center mb-10 animate-fade-in-up animate-fade-in-delay-1">
               <h2 className="text-2xl font-semibold mb-2 text-gray-900 dark:text-white">
                 Order Form
               </h2>
@@ -170,7 +281,7 @@ export default function Home() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-center gap-4 mb-6">
+            <div className="flex justify-center gap-4 mb-6 animate-fade-in-up animate-fade-in-delay-2">
               {/* Show presets button only for authenticated users */}
               {user && (
                 <button
@@ -202,7 +313,7 @@ export default function Home() {
                   showPresets && !isClosingPresets
                     ? "opacity-100 translate-y-0"
                     : "opacity-0 -translate-y-4 pointer-events-none"
-                }`}
+                } animate-fade-in-up animate-fade-in-delay-3`}
               >
                 {(showPresets || isClosingPresets) && (
                   <div className="mb-8">
@@ -213,7 +324,7 @@ export default function Home() {
             )}
 
             {/* Form Section - Available to all users */}
-            <div className="mb-8">
+            <div className="mb-8 animate-fade-in-up animate-fade-in-delay-4">
               <UpholsteryForm
                 onOrderSubmitted={handleOrderSubmitted}
                 preset={activeOrder}

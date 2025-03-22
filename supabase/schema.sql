@@ -1,4 +1,16 @@
--- Create tables for upholstery application
+-- Drop existing tables and types
+DROP TABLE IF EXISTS upholstery_presets;
+DROP TABLE IF EXISTS upholstery_orders;
+DROP TYPE IF EXISTS brand_type;
+DROP TYPE IF EXISTS shann_color_type;
+
+-- Create enum types
+CREATE TYPE brand_type AS ENUM ('Shann');
+
+CREATE TYPE shann_color_type AS ENUM (
+  'Bison', 'Cashmere', 'Cement', 'Cherry', 'Cigar', 'Clay', 'Flint',
+  'Glacier', 'Mahogany', 'Maize', 'Metal', 'Oasis', 'Vanilla', 'Volcano', 'Zodiac'
+);
 
 -- Table for storing upholstery orders
 CREATE TABLE upholstery_orders (
@@ -7,34 +19,10 @@ CREATE TABLE upholstery_orders (
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   van_number TEXT NOT NULL,
   model TEXT NOT NULL,
+  model_type TEXT NOT NULL,
   order_date DATE NOT NULL,
-  brand_of_sample TEXT NOT NULL,
-  color_of_sample TEXT NOT NULL,
-  bed_head TEXT NOT NULL,
-  arms TEXT NOT NULL,
-  base TEXT,
-  mag_pockets TEXT NOT NULL,
-  head_bumper TEXT NOT NULL DEFAULT 'false',
-  other TEXT,
-  lounge_type TEXT NOT NULL,
-  design TEXT NOT NULL,
-  curtain TEXT NOT NULL DEFAULT 'Yes',
-  stitching TEXT NOT NULL,
-  bunk_mattresses TEXT NOT NULL DEFAULT 'None'
-);
-
--- Table for storing presets
-CREATE TABLE upholstery_presets (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  preset_name TEXT NOT NULL,
-  van_number TEXT NOT NULL,
-  model TEXT NOT NULL,
-  order_date DATE NOT NULL,
-  brand_of_sample TEXT NOT NULL,
-  color_of_sample TEXT NOT NULL,
+  brand_of_sample brand_type NOT NULL,
+  color_of_sample shann_color_type NOT NULL,
   bed_head TEXT NOT NULL,
   arms TEXT NOT NULL,
   base TEXT,
@@ -46,7 +34,43 @@ CREATE TABLE upholstery_presets (
   curtain TEXT NOT NULL DEFAULT 'Yes',
   stitching TEXT NOT NULL,
   bunk_mattresses TEXT NOT NULL DEFAULT 'None',
-  UNIQUE(user_id, preset_name) -- Make preset names unique per user
+  layout_id TEXT,
+  layout_width TEXT,
+  layout_length TEXT,
+  layout_name TEXT,
+  layout_image_url TEXT
+);
+
+-- Table for storing presets
+CREATE TABLE upholstery_presets (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  preset_name TEXT NOT NULL,
+  van_number TEXT NOT NULL,
+  model TEXT NOT NULL,
+  model_type TEXT NOT NULL,
+  order_date DATE NOT NULL,
+  brand_of_sample brand_type NOT NULL,
+  color_of_sample shann_color_type NOT NULL,
+  bed_head TEXT NOT NULL,
+  arms TEXT NOT NULL,
+  base TEXT,
+  mag_pockets TEXT NOT NULL,
+  head_bumper TEXT NOT NULL DEFAULT 'false',
+  other TEXT,
+  lounge_type TEXT NOT NULL,
+  design TEXT NOT NULL,
+  curtain TEXT NOT NULL DEFAULT 'Yes',
+  stitching TEXT NOT NULL,
+  bunk_mattresses TEXT NOT NULL DEFAULT 'None',
+  layout_id TEXT,
+  layout_width TEXT,
+  layout_length TEXT,
+  layout_name TEXT,
+  layout_image_url TEXT,
+  UNIQUE(user_id, preset_name)
 );
 
 -- Create indexes for better performance
@@ -55,6 +79,8 @@ CREATE INDEX idx_presets_preset_name ON upholstery_presets(preset_name);
 CREATE INDEX idx_presets_van_number ON upholstery_presets(van_number);
 CREATE INDEX idx_presets_user_id ON upholstery_presets(user_id);
 CREATE INDEX idx_orders_user_id ON upholstery_orders(user_id);
+CREATE INDEX idx_orders_layout_id ON upholstery_orders(layout_id);
+CREATE INDEX idx_presets_layout_id ON upholstery_presets(layout_id);
 
 -- Create trigger to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -73,14 +99,6 @@ CREATE TRIGGER update_presets_updated_at
 -- Enable RLS
 ALTER TABLE upholstery_orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE upholstery_presets ENABLE ROW LEVEL SECURITY;
-
--- Drop existing policies
-DROP POLICY IF EXISTS "Allow anonymous select on upholstery_orders" ON upholstery_orders;
-DROP POLICY IF EXISTS "Allow anonymous insert on upholstery_orders" ON upholstery_orders;
-DROP POLICY IF EXISTS "Allow anonymous select on upholstery_presets" ON upholstery_presets;
-DROP POLICY IF EXISTS "Allow anonymous insert on upholstery_presets" ON upholstery_presets;
-DROP POLICY IF EXISTS "Allow anonymous delete on upholstery_presets" ON upholstery_presets;
-DROP POLICY IF EXISTS "Allow anonymous update on upholstery_presets" ON upholstery_presets;
 
 -- Create policies for upholstery_orders
 CREATE POLICY "Enable read access for own orders"

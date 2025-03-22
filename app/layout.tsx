@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "./contexts/AuthContext";
+import { initializeApp } from "./lib/init";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,6 +18,9 @@ export const metadata: Metadata = {
   title: "Ideal Caravans Upholstery Order Form",
   description: "Order form for caravan upholstery selection",
 };
+
+// Initialize the app
+initializeApp().catch(console.error);
 
 export default function RootLayout({
   children,
