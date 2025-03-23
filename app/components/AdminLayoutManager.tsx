@@ -8,6 +8,10 @@ import {
 import type { StorageLayout } from "../lib/storage";
 import { supabase } from "../lib/supabase";
 import Image from "next/image";
+import { Upload, Pencil, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 interface AdminLayoutManagerProps {
   onLayoutChange?: () => void;
@@ -23,14 +27,16 @@ export default function AdminLayoutManager({
   const [success, setSuccess] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [layouts, setLayouts] = useState<StorageLayout[]>([]);
-  const [isPanelExpanded, setIsPanelExpanded] = useState(false);
   const [editingLayout, setEditingLayout] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
 
   // Fetch admin status and layouts on mount
   useEffect(() => {
     async function initialize() {
-      if (!user) return;
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
 
       try {
         const { data, error } = await supabase.rpc("is_admin", {
@@ -38,19 +44,25 @@ export default function AdminLayoutManager({
         });
 
         if (error) {
-          console.error("Error checking admin status:", error.message);
+          setError("Error checking admin permissions");
+          setIsLoading(false);
           return;
         }
 
         setIsAdmin(data || false);
 
         if (data) {
-          // Only fetch layouts if user is admin
-          const layoutsList = await listLayouts();
-          setLayouts(layoutsList);
+          try {
+            const layoutsList = await listLayouts();
+            setLayouts(layoutsList);
+          } catch (err) {
+            setError("Error loading layouts");
+          }
+        } else {
+          setError("You do not have admin permissions");
         }
       } catch (err) {
-        console.error("Error during initialization:", err);
+        setError("Error initializing admin panel");
       } finally {
         setIsLoading(false);
       }
@@ -59,8 +71,20 @@ export default function AdminLayoutManager({
     initialize();
   }, [user]);
 
-  if (!user || !isAdmin) {
-    return null;
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px] text-destructive">
+        Please sign in to access admin features.
+      </div>
+    );
+  }
+
+  if (!isAdmin && !isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px] text-destructive">
+        {error || "You do not have permission to access this page."}
+      </div>
+    );
   }
 
   const handleFileUpload = async (
@@ -169,190 +193,168 @@ export default function AdminLayoutManager({
   };
 
   return (
-    <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-      <button
-        onClick={() => setIsPanelExpanded(!isPanelExpanded)}
-        className="w-full flex items-center justify-between text-xl font-semibold mb-4 text-gray-900 dark:text-white hover:cursor-pointer"
-      >
-        <span>Layout Management (Admin Only)</span>
-        <svg
-          className={`w-6 h-6 transform transition-transform ${
-            isPanelExpanded ? "rotate-180" : ""
-          }`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 9l-7 7-7-7"
-          />
-        </svg>
-      </button>
-
-      <div
-        className={`space-y-6 overflow-hidden transition-all duration-300 ${
-          isPanelExpanded ? "max-h-[2000px]" : "max-h-0"
-        }`}
-      >
-        {/* Upload Section */}
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-              Upload New Layout
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileUpload}
-              disabled={isUploading}
-              className="block w-full text-sm text-gray-500 dark:text-gray-400
-                file:mr-4 file:py-2 file:px-4
-                file:rounded-md file:border-0
-                file:text-sm file:font-semibold
-                file:bg-blue-50 file:text-blue-700
-                hover:file:bg-blue-100 hover:file:cursor-pointer
-                dark:file:bg-blue-900/50 dark:file:text-blue-200"
-            />
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Recommended: WebP format, max 10MB, 1920x1080px
-            </p>
+    <div className="space-y-8">
+      {/* Upload Section */}
+      <div className={cn(
+        "rounded-lg border bg-card p-6",
+        isLoading && "opacity-50 pointer-events-none"
+      )}>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold">Upload New Layout</h3>
+              <p className="text-sm text-muted-foreground">
+                Add a new layout to your collection
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              className="relative overflow-hidden"
+              disabled={isUploading || isLoading}
+            >
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileUpload}
+                disabled={isUploading || isLoading}
+                className="absolute inset-0 opacity-0 cursor-pointer"
+              />
+              <Upload className="mr-2 h-4 w-4" />
+              {isUploading ? "Uploading..." : "Choose File"}
+            </Button>
           </div>
 
-          {isUploading && (
-            <div className="text-blue-600 dark:text-blue-400">Uploading...</div>
+          {(error || success) && (
+            <div className={cn(
+              "text-sm px-4 py-3 rounded-lg",
+              error ? "bg-destructive/10 text-destructive" : "bg-emerald-500/10 text-emerald-500"
+            )}>
+              {error || success}
+            </div>
           )}
 
-          {error && (
-            <div className="text-red-600 dark:text-red-400">{error}</div>
-          )}
+          <div className="text-xs text-muted-foreground bg-muted/50 px-4 py-3 rounded-lg">
+            <p>📝 Recommendations:</p>
+            <ul className="list-disc list-inside mt-1 space-y-1">
+              <li>Use WebP format for best quality and performance</li>
+              <li>Maximum file size: 10MB</li>
+              <li>Optimal resolution: 1920x1080px</li>
+            </ul>
+          </div>
+        </div>
+      </div>
 
-          {success && (
-            <div className="text-green-600 dark:text-green-400">{success}</div>
-          )}
+      {/* Layouts Grid */}
+      <div className={cn(
+        "space-y-4",
+        isLoading && "opacity-50 pointer-events-none"
+      )}>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="font-semibold">Uploaded Layouts</h3>
+            <p className="text-sm text-muted-foreground">
+              {layouts.length === 0
+                ? "No layouts uploaded yet"
+                : `${layouts.length} layout${layouts.length === 1 ? "" : "s"} available`}
+            </p>
+          </div>
         </div>
 
-        {/* Layouts Grid */}
-        <div>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-            Uploaded Layouts
-          </h3>
+        {isLoading && (
+          <div className="flex items-center justify-center min-h-[200px]">
+            <div className="flex flex-col items-center gap-2">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <p className="text-sm text-muted-foreground">Loading layouts...</p>
+            </div>
+          </div>
+        )}
 
-          {isLoading ? (
-            <div className="text-gray-500 dark:text-gray-400">
-              Loading layouts...
-            </div>
-          ) : layouts.length === 0 ? (
-            <div className="text-gray-500 dark:text-gray-400">
-              No layouts uploaded yet
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {layouts.map((layout) => (
-                <div
-                  key={layout.path}
-                  className="relative group bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden hover:cursor-pointer border-2 border-transparent hover:border-neutral-200 dark:hover:border-neutral-800 transition-all duration-200"
-                >
-                  <div className="aspect-video w-full relative bg-gray-100 dark:bg-gray-800">
-                    <Image
-                      src={layout.url}
-                      alt={layout.name}
-                      fill
-                      className="object-cover transition-all duration-300 ease-in-out"
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    />
-                  </div>
-                  <div className="p-3">
-                    {editingLayout === layout.path ? (
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={newName}
-                          onChange={(e) => setNewName(e.target.value)}
-                          className="w-full px-2 py-1 text-sm border rounded dark:bg-gray-600 dark:border-gray-500 dark:text-white"
-                          placeholder="Enter new name"
-                          autoFocus
-                        />
-                        <button
-                          onClick={() => handleRename(layout)}
-                          className="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 hover:cursor-pointer"
-                        >
-                          ✓
-                        </button>
-                        <button
-                          onClick={() => {
-                            setEditingLayout(null);
-                            setNewName("");
-                          }}
-                          className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:cursor-pointer"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                          {layout.name.split(".")[0]}
-                        </p>
-                        <button
-                          onClick={() => {
-                            const nameWithoutExt = layout.name.split(".")[0];
-                            setEditingLayout(layout.path);
-                            setNewName(nameWithoutExt);
-                          }}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 hover:cursor-pointer"
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                    )}
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Uploaded:{" "}
-                      {new Date(layout.created_at).toLocaleDateString()} @{" "}
-                      {new Date(layout.created_at).toLocaleTimeString()}
-                    </p>
-                  </div>
+        {!isLoading && layouts.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {layouts.map((layout) => (
+              <div
+                key={layout.path}
+                className="group relative bg-muted rounded-lg overflow-hidden border transition-all duration-200 hover:border-primary/50 hover:shadow-sm"
+              >
+                <div className="aspect-video w-full relative bg-muted">
+                  <Image
+                    src={layout.url}
+                    alt={layout.name}
+                    fill
+                    className="object-cover transition-all duration-300 ease-in-out"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  />
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDelete(layout);
                     }}
-                    className="absolute top-2 right-2 p-1 bg-red-100 dark:bg-red-900 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:cursor-pointer"
+                    className="absolute top-2 right-2 p-1.5 bg-background/80 backdrop-blur-sm rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background"
                     title="Delete layout"
                   >
-                    <svg
-                      className="w-4 h-4 text-red-600 dark:text-red-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
+                    <X className="h-4 w-4 text-destructive" />
                   </button>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+                <div className="p-3 bg-background/80 backdrop-blur-sm">
+                  {editingLayout === layout.path ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        className="h-8 text-sm"
+                        placeholder="Enter new name"
+                        autoFocus
+                      />
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0"
+                        onClick={() => handleRename(layout)}
+                      >
+                        <span className="sr-only">Save</span>
+                        ✓
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0"
+                        onClick={() => {
+                          setEditingLayout(null);
+                          setNewName("");
+                        }}
+                      >
+                        <span className="sr-only">Cancel</span>
+                        ✕
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium truncate">
+                        {layout.name.split(".")[0]}
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100"
+                        onClick={() => {
+                          const nameWithoutExt = layout.name.split(".")[0];
+                          setEditingLayout(layout.path);
+                          setNewName(nameWithoutExt);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                        <span className="sr-only">Edit name</span>
+                      </Button>
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Uploaded: {new Date(layout.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -5,17 +5,19 @@ import { TrendingUp } from "lucide-react";
 import {
   Bar,
   BarChart,
-  CartesianGrid,
   XAxis,
-  Label,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
   YAxis,
   Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Label,
+  LabelList,
+  CartesianGrid,
 } from "recharts";
 import { useTheme } from "next-themes";
-
+import { useEffect, useState } from "react";
+import { ProductionStatusData } from "@/app/lib/server/googleSheets";
 import {
   Card,
   CardContent,
@@ -28,114 +30,39 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "./chart";
 import type { ChartConfig } from "./chart";
 import { DataTable, type VanData } from "./data-table";
 
-interface CaravansChartProps {
+interface DealerChartProps {
   data: Array<{
     name: string;
     count: number;
     trend: number;
   }>;
+  onVanSelect?: (vanNumber: string) => void;
 }
-
-// Sample data for the table - this should be replaced with real data from your Google Sheet
-const sampleTableData: VanData[] = [
-  {
-    vanNumber: "V001",
-    customerName: "John Smith",
-    model: "Cape Otway 18.6",
-    status: "Chassis In",
-  },
-  {
-    vanNumber: "V002",
-    customerName: "Jane Doe",
-    model: "Barrington 21",
-    status: "Building",
-  },
-  {
-    vanNumber: "V003",
-    customerName: "Mike Johnson",
-    model: "Opulance 22",
-    status: "Wiring",
-  },
-  {
-    vanNumber: "V004",
-    customerName: "Sarah Williams",
-    model: "Voyager 19.6",
-    status: "Cladding",
-  },
-  {
-    vanNumber: "V005",
-    customerName: "Robert Brown",
-    model: "Cape Otway 20.5",
-    status: "Walls Up",
-  },
-  {
-    vanNumber: "V006",
-    customerName: "Emily Davis",
-    model: "Barrington 22.5",
-    status: "Finishing",
-  },
-  {
-    vanNumber: "V007",
-    customerName: "David Wilson",
-    model: "Cape Otway 17",
-    status: "Chassis In",
-  },
-  {
-    vanNumber: "V008",
-    customerName: "Lisa Anderson",
-    model: "Opulance 22",
-    status: "Building",
-  },
-  {
-    vanNumber: "V009",
-    customerName: "James Taylor",
-    model: "Barrington 21.5",
-    status: "Wiring",
-  },
-  {
-    vanNumber: "V010",
-    customerName: "Michelle Lee",
-    model: "Cape Otway 18.6",
-    status: "Cladding",
-  },
-  {
-    vanNumber: "V011",
-    customerName: "Peter White",
-    model: "Voyager 19.6",
-    status: "Finishing",
-  },
-  {
-    vanNumber: "V012",
-    customerName: "Karen Martin",
-    model: "Barrington Quad 23",
-    status: "Walls Up",
-  },
-];
 
 // Get color for each bar based on location
 function getBarColor(location: string): string {
   switch (location) {
     case "Adelaide City":
-      return "hsl(0 0% 25.1%)";
+      return "hsl(var(--chart-1))";
     case "Geelong":
-      return "hsl(200.4 98% 39.4%)";
+      return "hsl(var(--chart-2))";
     case "Wangaratta":
-      return "hsl(174.7 83.9% 31.6%)";
+      return "hsl(var(--chart-3))";
     case "Ideal":
-      return "hsl(0 84.2% 60.2%)";
+      return "hsl(var(--chart-4))";
     default:
-      return "hsl(var(--primary))";
+      return "hsl(var(--chart-5))";
   }
 }
 
-export function CaravansChart({ data }: CaravansChartProps) {
+const DealerChart: React.FC<DealerChartProps> = ({ data, onVanSelect }) => {
   const { theme } = useTheme();
 
   // Transform data for the charts
   const chartData = data.map((item) => ({
     location: item.name,
     count: item.count,
-    color: getBarColor(item.name),
+    fill: getBarColor(item.name),
   }));
 
   const pieData = data.map((item) => ({
@@ -148,8 +75,7 @@ export function CaravansChart({ data }: CaravansChartProps) {
   const total = data.reduce((sum, item) => sum + item.count, 0);
 
   // Calculate average trend
-  const avgTrend =
-    data.reduce((sum, item) => sum + item.trend, 0) / data.length;
+  const avgTrend = data.reduce((sum, item) => sum + item.trend, 0) / data.length;
 
   // Chart configurations
   const barChartConfig: ChartConfig = {
@@ -157,72 +83,130 @@ export function CaravansChart({ data }: CaravansChartProps) {
       label: "Caravan Count",
       color: "currentColor",
     },
-    xAxis: {
-      angle: 0,
-      textAnchor: "middle",
-      style: {
-        fontWeight: "bold",
-      },
+    "Adelaide City": {
+      label: "Adelaide City",
+      color: "hsl(var(--chart-1))",
+    },
+    "Geelong": {
+      label: "Geelong",
+      color: "hsl(var(--chart-2))",
+    },
+    "Wangaratta": {
+      label: "Wangaratta",
+      color: "hsl(var(--chart-3))",
+    },
+    "Ideal": {
+      label: "Ideal",
+      color: "hsl(var(--chart-4))",
     },
   };
 
   const pieChartConfig: ChartConfig = {
     value: {
-      label: "Caravan Share",
+      label: "Count",
       color: "currentColor",
+    },
+    "Adelaide City": {
+      label: "Adelaide City",
+      color: "hsl(var(--chart-1))",
+    },
+    "Geelong": {
+      label: "Geelong",
+      color: "hsl(var(--chart-2))",
+    },
+    "Wangaratta": {
+      label: "Wangaratta",
+      color: "hsl(var(--chart-3))",
+    },
+    "Ideal": {
+      label: "Ideal",
+      color: "hsl(var(--chart-4))",
     },
   };
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="@container">
-          <CardHeader className="pb-2">
+          <CardHeader>
             <CardTitle>Caravan Distribution</CardTitle>
             <CardDescription>Total Caravans: {total}</CardDescription>
           </CardHeader>
-          <CardContent className="p-0 flex flex-col">
-            <div className="flex-1">
-              <ChartContainer config={barChartConfig}>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart
-                    data={chartData}
-                    margin={{ top: 10, right: 10, left: 0, bottom: 40 }}
-                  >
-                    <CartesianGrid vertical={false} />
-                    <XAxis
-                      dataKey="location"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={12}
-                      fontSize={12}
-                      interval={0}
-                      angle={barChartConfig.xAxis.angle}
-                      textAnchor={barChartConfig.xAxis.textAnchor}
-                      style={barChartConfig.xAxis.style}
-                    />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar
-                      dataKey="count"
-                      radius={[4, 4, 0, 0]}
-                      fill={
-                        theme === "dark"
-                          ? "hsl(var(--foreground))"
-                          : "hsl(var(--primary))"
+          <CardContent>
+            <ChartContainer config={barChartConfig}>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart
+                  data={chartData}
+                  layout="vertical"
+                  margin={{
+                    top: 0,
+                    right: 50,
+                    left: 100,
+                    bottom: 0,
+                  }}
+                >
+                  <CartesianGrid horizontal={false} />
+                  <YAxis
+                    dataKey="location"
+                    type="category"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={10}
+                    hide
+                  />
+                  <XAxis type="number" hide />
+                  <Tooltip
+                    cursor={false}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="rounded-lg border bg-background p-2 shadow-sm">
+                            <div className="grid gap-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-sm text-muted-foreground">
+                                  {payload[0].payload.location}
+                                </span>
+                                <span className="font-medium">
+                                  {payload[0].value} caravans
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
                       }
+                      return null;
+                    }}
+                  />
+                  <Bar
+                    dataKey="count"
+                    fill="currentColor"
+                    radius={[4, 4, 4, 4]}
+                    maxBarSize={40}
+                  >
+                    <LabelList
+                      dataKey="location"
+                      position="left"
+                      offset={8}
+                      className="fill-foreground"
+                      fontSize={12}
                     />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </div>
-            <div className="px-6 py-2 flex items-center justify-end gap-2 text-xs text-muted-foreground border-t">
-              <span className="font-medium">
-                Average distribution: {avgTrend.toFixed(1)}%
-              </span>
-              <TrendingUp className="h-3 w-3" />
-            </div>
+                    <LabelList
+                      dataKey="count"
+                      position="right"
+                      offset={8}
+                      className="fill-foreground"
+                      fontSize={12}
+                    />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
+          <CardFooter className="flex-col items-start gap-2 text-sm">
+            <div className="leading-none text-muted-foreground">
+              Showing total caravans by location
+            </div>
+          </CardFooter>
         </Card>
 
         <Card className="@container">
@@ -235,9 +219,24 @@ export function CaravansChart({ data }: CaravansChartProps) {
               <ChartContainer config={pieChartConfig}>
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
-                    <ChartTooltip
-                      cursor={false}
-                      content={<ChartTooltipContent hideLabel />}
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <div className="rounded-lg border bg-background p-2 shadow-sm">
+                              <div className="flex flex-col gap-1">
+                                <p className="text-sm font-medium">
+                                  {payload[0].name}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {payload[0].value} caravans
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
                     />
                     <Pie
                       data={pieData}
@@ -248,6 +247,12 @@ export function CaravansChart({ data }: CaravansChartProps) {
                       strokeWidth={5}
                       cx="50%"
                       cy="50%"
+                      startAngle={0}
+                      endAngle={360}
+                      animationBegin={0}
+                      animationDuration={2000}
+                      animateNewValues={true}
+                      isAnimationActive={true}
                     >
                       <Label
                         position="center"
@@ -299,18 +304,8 @@ export function CaravansChart({ data }: CaravansChartProps) {
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Production Status</CardTitle>
-          <CardDescription>
-            Current status of caravans in production
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <DataTable data={sampleTableData} />
-        </CardContent>
-      </Card>
     </div>
   );
-}
+};
+
+export default DealerChart;

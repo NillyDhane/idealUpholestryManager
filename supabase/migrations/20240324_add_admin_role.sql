@@ -36,30 +36,30 @@ DO $$ BEGIN
     -- Create new policies
     CREATE POLICY "Allow public layout viewing"
     ON storage.objects FOR SELECT
-    USING (bucket_id = 'upholestry-layouts');
+    USING (bucket_id = 'upholstery-layouts');
 
     CREATE POLICY "Allow admin uploads only"
     ON storage.objects FOR INSERT
     WITH CHECK (
-        bucket_id = 'upholestry-layouts'
+        bucket_id = 'upholstery-layouts'
         AND public.is_admin(auth.uid())
     );
 
     CREATE POLICY "Allow admin updates only"
     ON storage.objects FOR UPDATE
     USING (
-        bucket_id = 'upholestry-layouts'
+        bucket_id = 'upholstery-layouts'
         AND public.is_admin(auth.uid())
     )
     WITH CHECK (
-        bucket_id = 'upholestry-layouts'
+        bucket_id = 'upholstery-layouts'
         AND public.is_admin(auth.uid())
     );
 
     CREATE POLICY "Allow admin deletes only"
     ON storage.objects FOR DELETE
     USING (
-        bucket_id = 'upholestry-layouts'
+        bucket_id = 'upholstery-layouts'
         AND public.is_admin(auth.uid())
     );
 END $$; 

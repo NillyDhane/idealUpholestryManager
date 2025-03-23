@@ -45,7 +45,27 @@ export function Sidebar({
   };
 
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, signInWithGoogle, signOut, isLoading } = useAuth();
+
+  console.log("Sidebar auth state:", {
+    isLoading,
+    isAuthenticated: !!user,
+    user,
+    email: user?.email,
+    metadata: user?.user_metadata,
+  });
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  const handleAuth = async () => {
+    if (user) {
+      await signOut();
+    } else {
+      await signInWithGoogle();
+    }
+  };
 
   return (
     <>
@@ -62,7 +82,7 @@ export function Sidebar({
         </SheetTrigger>
         <SheetContent side="left" className="w-[300px] p-0">
           <nav className="flex flex-col h-full bg-sidebar border-r shadow-sm">
-            <div className="p-4 pb-2 border-b">
+            <div className="p-4 pb-2 flex justify-between items-center border-b">
               <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
               <div className="flex items-center gap-2">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary">
@@ -72,6 +92,9 @@ export function Sidebar({
                 </div>
                 <span className="text-lg font-semibold">Ideal Caravans</span>
               </div>
+              <Button onClick={handleAuth} variant="outline" size="sm">
+                {user ? 'Sign Out' : 'Sign In'}
+              </Button>
             </div>
 
             <ScrollArea className="flex-1">
@@ -97,24 +120,26 @@ export function Sidebar({
               </div>
             </ScrollArea>
 
-            <div className="border-t p-4">
-              <div className="flex items-center gap-2">
-                <Avatar>
-                  <AvatarImage src={user?.user_metadata?.avatar_url} />
-                  <AvatarFallback>
-                    {user?.email?.charAt(0).toUpperCase() || "U"}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium">
-                    {user?.user_metadata?.full_name || user?.email}
-                  </span>
-                  <span className="text-xs text-muted-foreground truncate max-w-[150px]">
-                    {user?.email}
-                  </span>
+            {user && (
+              <div className="border-t p-4 bg-background/50">
+                <div className="flex items-center gap-2">
+                  <Avatar className="border border-border">
+                    <AvatarImage src={user?.user_metadata?.avatar_url} />
+                    <AvatarFallback className="bg-muted">
+                      {user?.email?.charAt(0).toUpperCase() || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-primary">
+                      {user?.user_metadata?.full_name || user?.email?.split('@')[0]}
+                    </span>
+                    <span className="text-xs text-muted-foreground truncate max-w-[150px]">
+                      {user?.email}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </nav>
         </SheetContent>
       </Sheet>
@@ -126,7 +151,7 @@ export function Sidebar({
           className
         )}
       >
-        <div className="p-4 pb-2 border-b">
+        <div className="p-4 pb-2 flex justify-between items-center border-b">
           <div
             className={cn(
               "flex items-center gap-2",
@@ -142,6 +167,11 @@ export function Sidebar({
               <span className="text-lg font-semibold">Ideal Caravans</span>
             )}
           </div>
+          {!collapsed && (
+            <Button onClick={handleAuth} variant="outline" size="sm">
+              {user ? 'Sign Out' : 'Sign In'}
+            </Button>
+          )}
         </div>
 
         <ScrollArea className="flex-1">
@@ -170,31 +200,33 @@ export function Sidebar({
           </div>
         </ScrollArea>
 
-        <div className="border-t p-4">
-          <div
-            className={cn(
-              "flex items-center gap-2",
-              collapsed && "justify-center"
-            )}
-          >
-            <Avatar>
-              <AvatarImage src={user?.user_metadata?.avatar_url} />
-              <AvatarFallback>
-                {user?.email?.charAt(0).toUpperCase() || "U"}
-              </AvatarFallback>
-            </Avatar>
-            {!collapsed && (
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">
-                  {user?.user_metadata?.full_name || user?.email}
-                </span>
-                <span className="text-xs text-muted-foreground truncate max-w-[150px]">
-                  {user?.email}
-                </span>
-              </div>
-            )}
+        {user && (
+          <div className="border-t p-4 bg-background/50">
+            <div
+              className={cn(
+                "flex items-center gap-2",
+                collapsed && "justify-center"
+              )}
+            >
+              <Avatar className="border border-border">
+                <AvatarImage src={user?.user_metadata?.avatar_url} />
+                <AvatarFallback className="bg-muted">
+                  {user?.email?.charAt(0).toUpperCase() || "U"}
+                </AvatarFallback>
+              </Avatar>
+              {!collapsed && (
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-primary">
+                    {user?.user_metadata?.full_name || user?.email?.split('@')[0]}
+                  </span>
+                  <span className="text-xs text-muted-foreground truncate max-w-[150px]">
+                    {user?.email}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </nav>
     </>
   );
