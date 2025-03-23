@@ -1,27 +1,19 @@
-export type Brand = {
-  name: string;
-  colors: string[];
-};
+export const brands = ["Shann"] as const;
 
-export const brands: Brand[] = [
-  {
-    name: "Shann",
-    colors: [
-      "Bison",
-      "Cashmere",
-      "Cement",
-      "Cherry",
-      "Cigar",
-      "Clay",
-      "Flint",
-      "Glacier",
-      "Mahogany",
-      "Maize",
-      "Metal",
-      "Oasis",
-      "Vanilla",
-      "Volcano",
-      "Zodiac",
-    ],
-  },
-];
+export const brandColors = {
+  Shann: [
+    "Ash",
+    "Black",
+    "Charcoal",
+    "Chocolate",
+    "Cream",
+    "Grey",
+    "Navy",
+    "Stone",
+    "Tan",
+  ],
+} as const;
+
+export type Brand = (typeof brands)[number];
+export type BrandColors = typeof brandColors;
+export type BrandColor<B extends Brand> = (typeof brandColors)[B][number];

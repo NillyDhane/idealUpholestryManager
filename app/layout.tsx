@@ -28,11 +28,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="antialiased">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white`}
+        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-background text-foreground font-sans`}
       >
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <main className="relative">{children}</main>
+        </AuthProvider>
       </body>
     </html>
   );
