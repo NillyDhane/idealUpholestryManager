@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
 });
 
 // PDF Document component
-const OrderPDF = ({ order }: { order: UpholsteryOrder }) => (
+export const OrderPDF = ({ order }: { order: UpholsteryOrder }) => (
   <Document>
     <Page size="A4" style={styles.page}>
       <Text style={styles.title}>Ideal Caravans Upholstery Order</Text>
@@ -94,8 +94,8 @@ const OrderPDF = ({ order }: { order: UpholsteryOrder }) => (
           <Text style={styles.sectionHeaderText}>Basic Information</Text>
           <Text style={styles.value}>
             <Text style={{ fontWeight: "bold" }}>Order Placed: </Text>
-            {new Date(order.orderDate).toLocaleDateString("en-GB")} @{" "}
-            {new Date(order.orderDate).toLocaleTimeString("en-US", {
+            {new Date(order.order_date).toLocaleDateString("en-GB")} @{" "}
+            {new Date(order.order_date).toLocaleTimeString("en-US", {
               hour: "numeric",
               minute: "2-digit",
               hour12: true,
@@ -105,7 +105,7 @@ const OrderPDF = ({ order }: { order: UpholsteryOrder }) => (
 
         <View style={styles.row}>
           <Text style={styles.label}>Van Number:</Text>
-          <Text style={styles.value}>LTRV - {order.vanNumber}</Text>
+          <Text style={styles.value}>LTRV - {order.van_number}</Text>
         </View>
 
         <View style={styles.row}>
@@ -115,12 +115,12 @@ const OrderPDF = ({ order }: { order: UpholsteryOrder }) => (
 
         <View style={styles.row}>
           <Text style={styles.label}>Brand of Sample:</Text>
-          <Text style={styles.value}>{order.brandOfSample}</Text>
+          <Text style={styles.value}>{order.brand_of_sample}</Text>
         </View>
 
         <View style={styles.row}>
           <Text style={styles.label}>Color of Sample:</Text>
-          <Text style={styles.value}>{order.colorOfSample}</Text>
+          <Text style={styles.value}>{order.color_of_sample}</Text>
         </View>
       </View>
 
@@ -130,7 +130,7 @@ const OrderPDF = ({ order }: { order: UpholsteryOrder }) => (
 
         <View style={styles.row}>
           <Text style={styles.label}>Bed Head:</Text>
-          <Text style={styles.value}>{order.bedHead}</Text>
+          <Text style={styles.value}>{order.bed_head}</Text>
         </View>
 
         <View style={styles.row}>
@@ -147,13 +147,13 @@ const OrderPDF = ({ order }: { order: UpholsteryOrder }) => (
 
         <View style={styles.row}>
           <Text style={styles.label}>Mag Pockets:</Text>
-          <Text style={styles.value}>{order.magPockets}</Text>
+          <Text style={styles.value}>{order.mag_pockets}</Text>
         </View>
 
         <View style={styles.row}>
           <Text style={styles.label}>Head Bumper:</Text>
           <Text style={styles.value}>
-            {order.headBumper === "true" ? "1" : "None"}
+            {order.head_bumper === "true" ? "Yes" : "No"}
           </Text>
         </View>
 
@@ -171,7 +171,7 @@ const OrderPDF = ({ order }: { order: UpholsteryOrder }) => (
 
         <View style={styles.row}>
           <Text style={styles.label}>Lounge Type:</Text>
-          <Text style={styles.value}>{order.loungeType}</Text>
+          <Text style={styles.value}>{order.lounge_type}</Text>
         </View>
 
         <View style={styles.row}>
@@ -191,41 +191,39 @@ const OrderPDF = ({ order }: { order: UpholsteryOrder }) => (
 
         <View style={styles.row}>
           <Text style={styles.label}>Bunk Mattresses:</Text>
-          <Text style={styles.value}>{order.bunkMattresses}</Text>
+          <Text style={styles.value}>{order.bunk_mattresses}</Text>
         </View>
       </View>
 
       {/* Upholstery Layout Section */}
-      {order.layoutImageUrl && (
+      {order.layout_image_url && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Upholstery Layout</Text>
 
-          {/* Ensure the image URL is absolute */}
           <Image
-            src={{ uri: order.layoutImageUrl }}
+            src={order.layout_image_url}
             style={styles.layoutImage}
           />
 
           <View style={styles.layoutDetails}>
-            {order.layoutName && (
+            {order.layout_name && (
               <View style={styles.row}>
                 <Text style={styles.label}>Layout Name:</Text>
                 <Text style={styles.value}>
-                  {order.layoutName.replace(/\.[^/.]+$/, "")}{" "}
-                  {/* Remove file extension */}
+                  {order.layout_name.replace(/\.[^/.]+$/, "")}
                 </Text>
               </View>
             )}
-            {order.layoutWidth && (
+            {order.layout_width && (
               <View style={styles.row}>
                 <Text style={styles.label}>Width:</Text>
-                <Text style={styles.value}>{order.layoutWidth}mm</Text>
+                <Text style={styles.value}>{order.layout_width}mm</Text>
               </View>
             )}
-            {order.layoutLength && (
+            {order.layout_length && (
               <View style={styles.row}>
                 <Text style={styles.label}>Length:</Text>
-                <Text style={styles.value}>{order.layoutLength}mm</Text>
+                <Text style={styles.value}>{order.layout_length}mm</Text>
               </View>
             )}
           </View>
@@ -268,7 +266,7 @@ export default function PDFGenerator({ order }: PDFGeneratorProps) {
     <div>
       <PDFDownloadLink
         document={<OrderPDF order={order} />}
-        fileName={`upholstery-order-${order.vanNumber}.pdf`}
+        fileName={`upholstery-order-${order.van_number}.pdf`}
         className="w-[180px] h-[40px] px-4 py-2 bg-green-600 text-white font-medium rounded-md hover:bg-green-700 hover:cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors duration-200 inline-flex items-center justify-center whitespace-nowrap"
       >
         {({ loading }) => (loading ? "Generating PDF..." : "Download as PDF")}

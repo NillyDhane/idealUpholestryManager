@@ -91,6 +91,7 @@ export interface VanData {
   customerName: string;
   model: string;
   status: VanStatus;
+  location: string;
 }
 
 export interface DataTableProps {

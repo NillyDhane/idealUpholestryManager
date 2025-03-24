@@ -2,7 +2,8 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
-import { supabase } from "../lib/supabase";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { useRouter } from "next/navigation";
 
 type AuthContextType = {
   user: User | null;
@@ -28,62 +29,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  const supabase = createClientComponentClient();
 
   useEffect(() => {
-    let mounted = true;
-
-    async function getInitialSession() {
+    // Get initial session
+    const initSession = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
         if (error) {
           console.error("Error getting initial session:", error);
           return;
         }
 
-        if (mounted) {
-          if (session) {
-            console.log("Initial session found:", {
-              user: session.user,
-              email: session.user?.email,
-              metadata: session.user?.user_metadata
-            });
-            setSession(session);
-            setUser(session.user);
-          } else {
-            console.log("No initial session found");
-            setSession(null);
-            setUser(null);
-          }
-          setIsLoading(false);
+        if (initialSession) {
+          console.log("Initial session found:", initialSession.user.email);
+          setSession(initialSession);
+          setUser(initialSession.user);
+        } else {
+          console.log("No initial session found");
+          setSession(null);
+          setUser(null);
         }
       } catch (error) {
-        console.error("Error in getInitialSession:", error);
-        if (mounted) {
-          setIsLoading(false);
-        }
+        console.error("Error in initSession:", error);
+      } finally {
+        setIsLoading(false);
       }
-    }
+    };
 
-    getInitialSession();
+    initSession();
 
+    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
-        console.log("Auth state changed:", { event, user: currentSession?.user });
-        
-        if (mounted) {
+        console.log("Auth state changed:", event, currentSession?.user?.email);
+
+        if (currentSession) {
           setSession(currentSession);
-          setUser(currentSession?.user ?? null);
-          setIsLoading(false);
+          setUser(currentSession.user);
+          if (event === 'SIGNED_IN') {
+            router.push('/dashboard');
+          }
+        } else {
+          setSession(null);
+          setUser(null);
+          if (event === 'SIGNED_OUT') {
+            router.push('/login');
+          }
         }
       }
     );
 
     return () => {
-      mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [router, supabase]);
 
   const signInWithGoogle = async () => {
     try {
@@ -102,13 +103,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      setUser(null);
+      await supabase.auth.signOut();
       setSession(null);
+      setUser(null);
+      router.push('/login');
     } catch (error) {
       console.error("Error signing out:", error);
-      throw error;
+      // Force a hard redirect if there's an error
+      window.location.href = '/login';
     }
   };
 

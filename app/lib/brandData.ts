@@ -2,15 +2,21 @@ export const brands = ["Shann"] as const;
 
 export const brandColors = {
   Shann: [
-    "Ash",
-    "Black",
-    "Charcoal",
-    "Chocolate",
-    "Cream",
-    "Grey",
-    "Navy",
-    "Stone",
-    "Tan",
+    "Bison",
+    "Cashmere",
+    "Cement",
+    "Cherry",
+    "Cigar",
+    "Clay",
+    "Flint",
+    "Glacier",
+    "Mahogany",
+    "Maize",
+    "Metal",
+    "Oasis",
+    "Vanilla",
+    "Volcano",
+    "Zodiac"
   ],
 } as const;
 

@@ -35,6 +35,7 @@ export interface ProductionStatusData {
   customerName: string;
   model: string;
   status: string;
+  location: string;
 }
 
 function getDealerLocation(dealer: string): string {
@@ -199,10 +200,11 @@ export async function getProductionStatus(): Promise<ProductionStatusData[]> {
       const vanNumber = (row[0] || "").toString().trim();
       const model = (row[3] || "").toString().trim();
       const customerName = (row[5] || "").toString().trim();
+      const dealer = (row[4] || "").toString().trim(); // Column E contains dealer info
 
       // Skip if any required field is empty
-      if (!vanNumber || !model || !customerName) {
-        console.log("Skipping row due to empty required field:", { vanNumber, model, customerName });
+      if (!vanNumber || !model || !customerName || !dealer) {
+        console.log("Skipping row due to empty required field:", { vanNumber, model, customerName, dealer });
         continue;
       }
 
@@ -241,11 +243,25 @@ export async function getProductionStatus(): Promise<ProductionStatusData[]> {
         }
       }
 
+      // Determine dealer location
+      let location = "Unknown";
+      const normalizedDealer = dealer.toUpperCase().trim();
+      if (normalizedDealer.includes("IDEAL")) {
+        location = "Ideal";
+      } else if (normalizedDealer.includes("KEAN") || normalizedDealer.includes("LEON") || normalizedDealer.includes("LATITUDE")) {
+        location = "Geelong";
+      } else if (normalizedDealer.includes("HIGH COUNTRY")) {
+        location = "Wangaratta";
+      } else if (normalizedDealer.includes("KAKADU")) {
+        location = "Adelaide City";
+      }
+
       productionData.push({
         vanNumber,
         model,
         customerName,
-        status: currentStatus
+        status: currentStatus,
+        location
       });
     }
 

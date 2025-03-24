@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Sidebar } from "@/app/components/dashboard/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, Factory, Warehouse, Menu, AlertTriangle } from "lucide-react";
+import { Building2, Factory, Warehouse, Menu, AlertTriangle, CircleDot, SquareStack, Cable, Hammer, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DealerChart from "@/app/components/ui/dealer-chart";
 import { Template } from "@/app/components/template";
@@ -16,6 +16,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { DataTable, VanData } from "@/app/components/ui/data-table";
+import { Badge } from "@/components/ui/badge";
 
 interface DealerData {
   name: string;
@@ -50,6 +51,8 @@ export default function DashboardPage() {
   const [isDataReady, setIsDataReady] = useState(false);
   const [selectedVan, setSelectedVan] = useState<VanDetails | null>(null);
   const [showVanDetails, setShowVanDetails] = useState(false);
+  const [selectedStages, setSelectedStages] = useState<string[]>([]);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
 
   const fetchData = async () => {
     try {
@@ -90,15 +93,38 @@ export default function DashboardPage() {
 
   const fetchVanDetails = async (vanNumber: string) => {
     try {
-      const response = await fetch(`/api/van-details?vanNumber=${vanNumber}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch van details');
+      let retries = 3;
+      let error = null;
+
+      while (retries > 0) {
+        try {
+          const response = await fetch(`/api/van-details?vanNumber=${vanNumber}`);
+          if (response.status === 404) {
+            // Van not found - no need to retry
+            console.warn(`Van ${vanNumber} not found in the spreadsheet`);
+            return;
+          }
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const data = await response.json();
+          setSelectedVan(data);
+          setShowVanDetails(true);
+          return; // Success, exit the function
+        } catch (e) {
+          error = e;
+          retries--;
+          if (retries > 0) {
+            // Wait for 1 second before retrying
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
       }
-      const data = await response.json();
-      setSelectedVan(data);
-      setShowVanDetails(true);
+
+      // If we get here, all retries failed
+      console.error('Error fetching van details after retries:', error);
     } catch (error) {
-      console.error('Error fetching van details:', error);
+      console.error('Error in fetchVanDetails:', error);
     }
   };
 
@@ -114,6 +140,87 @@ export default function DashboardPage() {
     "Geelong": Factory,
     "Wangaratta": Warehouse,
     "Ideal": Building2,
+  };
+
+  const productionStages = [
+    "Chassis In",
+    "Walls Up",
+    "Building",
+    "Wiring",
+    "Cladding",
+    "Finishing",
+    "Not Started"
+  ];
+
+  const dealerLocations = [
+    "Ideal",
+    "Geelong",
+    "Wangaratta",
+    "Adelaide City"
+  ];
+
+  // Filter function for the production data
+  const filteredProductionData = productionData.filter(van => {
+    const matchesStage = selectedStages.length === 0 || selectedStages.includes(van.status);
+    const matchesLocation = selectedLocations.length === 0 || selectedLocations.includes(van.location);
+    return matchesStage && matchesLocation;
+  });
+
+  const toggleStage = (stage: string) => {
+    setSelectedStages(prev => 
+      prev.includes(stage) 
+        ? prev.filter(s => s !== stage)
+        : [...prev, stage]
+    );
+  };
+
+  const toggleLocation = (location: string) => {
+    setSelectedLocations(prev => 
+      prev.includes(location) 
+        ? prev.filter(l => l !== location)
+        : [...prev, location]
+    );
+  };
+
+  // Add status configuration function
+  const getStatusConfig = (status: string) => {
+    switch (status) {
+      case "Chassis In":
+        return {
+          icon: <CircleDot className="h-4 w-4" />,
+          color: "text-blue-500 dark:text-blue-400"
+        };
+      case "Walls Up":
+        return {
+          icon: <SquareStack className="h-4 w-4" />,
+          color: "text-yellow-500 dark:text-yellow-400"
+        };
+      case "Building":
+        return {
+          icon: <Building2 className="h-4 w-4" />,
+          color: "text-orange-500 dark:text-orange-400"
+        };
+      case "Wiring":
+        return {
+          icon: <Cable className="h-4 w-4" />,
+          color: "text-purple-500 dark:text-purple-400"
+        };
+      case "Cladding":
+        return {
+          icon: <Hammer className="h-4 w-4" />,
+          color: "text-pink-500 dark:text-pink-400"
+        };
+      case "Finishing":
+        return {
+          icon: <CheckCircle2 className="h-4 w-4" />,
+          color: "text-green-500 dark:text-green-400"
+        };
+      default:
+        return {
+          icon: <CircleDot className="h-4 w-4" />,
+          color: "text-gray-500 dark:text-gray-400"
+        };
+    }
   };
 
   if (isLoading || error) {
@@ -206,7 +313,76 @@ export default function DashboardPage() {
                     <DealerChart data={dealerData} onVanSelect={fetchVanDetails} />
                     <div className="mt-8">
                       <h2 className="text-2xl font-bold tracking-tight mb-4">Production Status</h2>
-                      <DataTable data={productionData} onVanSelect={fetchVanDetails} />
+                      
+                      {/* Filter Controls */}
+                      <div className="space-y-4 mb-6">
+                        <div>
+                          <h3 className="text-sm font-medium mb-3 text-muted-foreground">Filter by Production Stage</h3>
+                          <div className="flex flex-wrap gap-2">
+                            {productionStages.map(stage => {
+                              const statusConfig = getStatusConfig(stage);
+                              return (
+                                <Badge
+                                  key={stage}
+                                  variant="outline"
+                                  className={cn(
+                                    "cursor-pointer transition-colors border-muted-foreground/30",
+                                    selectedStages.includes(stage) 
+                                      ? statusConfig.color
+                                      : "hover:bg-muted"
+                                  )}
+                                  onClick={() => toggleStage(stage)}
+                                >
+                                  <span className="flex items-center gap-1">
+                                    {statusConfig.icon}
+                                    {stage}
+                                  </span>
+                                </Badge>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div>
+                          <h3 className="text-sm font-medium mb-3 text-muted-foreground">Filter by Location</h3>
+                          <div className="flex flex-wrap gap-2">
+                            {dealerLocations.map(location => (
+                              <Badge
+                                key={location}
+                                variant={selectedLocations.includes(location) ? "default" : "outline"}
+                                className={cn(
+                                  "cursor-pointer transition-colors",
+                                  selectedLocations.includes(location) 
+                                    ? "hover:bg-primary/80" 
+                                    : "hover:bg-muted"
+                                )}
+                                onClick={() => toggleLocation(location)}
+                              >
+                                {location}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+
+                        {(selectedStages.length > 0 || selectedLocations.length > 0) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedStages([]);
+                              setSelectedLocations([]);
+                            }}
+                            className="text-xs"
+                          >
+                            Clear Filters
+                          </Button>
+                        )}
+                      </div>
+
+                      <DataTable 
+                        data={filteredProductionData} 
+                        onVanSelect={fetchVanDetails} 
+                      />
                     </div>
                   </>
                 )}
@@ -312,10 +488,25 @@ export default function DashboardPage() {
                   ].map((stage) => (
                     <div
                       key={stage.label}
-                      className="flex items-center justify-between p-3 rounded-lg border bg-muted/50"
+                      className={cn(
+                        "flex items-center justify-between p-3 rounded-lg border",
+                        stage.date 
+                          ? "bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800" 
+                          : "bg-muted/50 border-muted"
+                      )}
                     >
-                      <span className="text-sm font-medium">{stage.label}</span>
-                      <span className="text-sm text-muted-foreground">
+                      <span className={cn(
+                        "text-sm font-medium",
+                        stage.date ? "text-green-700 dark:text-green-300" : ""
+                      )}>
+                        {stage.label}
+                      </span>
+                      <span className={cn(
+                        "text-sm",
+                        stage.date 
+                          ? "text-green-700 dark:text-green-300"
+                          : "text-muted-foreground"
+                      )}>
                         {stage.date || "Not started"}
                       </span>
                     </div>

@@ -14,11 +14,16 @@ export async function GET(request: Request) {
       );
     }
 
+    console.log("Fetching van details for:", vanNumber);
+    console.log("Using spreadsheet ID:", SPREADSHEET_ID);
+
     // Fetch the data from the SCHEDULE sheet
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
       range: "SCHEDULE!A:S", // Columns A through S
     });
+
+    console.log("Response received:", response.status);
 
     const rows = response.data.values;
     if (!rows) {
@@ -27,9 +32,15 @@ export async function GET(request: Request) {
 
     // Find the row with matching van number
     const headerRow = rows[0];
-    const vanRow = rows.find((row) => row[0] === vanNumber); // Assuming van number is in column A
+    const normalizedSearchVan = vanNumber.replace(/\s+/g, ' ').trim();
+    const vanRow = rows.find((row) => {
+      if (!row[0]) return false;
+      const sheetVanNumber = row[0].toString().replace(/\s+/g, ' ').trim();
+      return sheetVanNumber === normalizedSearchVan;
+    });
 
     if (!vanRow) {
+      console.log("Van not found. Searched for:", normalizedSearchVan);
       return NextResponse.json(
         { error: "Van not found" },
         { status: 404 }

@@ -45,27 +45,11 @@ export function Sidebar({
   };
 
   const pathname = usePathname();
-  const { user, signInWithGoogle, signOut, isLoading } = useAuth();
-
-  console.log("Sidebar auth state:", {
-    isLoading,
-    isAuthenticated: !!user,
-    user,
-    email: user?.email,
-    metadata: user?.user_metadata,
-  });
+  const { user, signOut, isLoading } = useAuth();
 
   if (isLoading) {
     return <div>Loading...</div>;
   }
-
-  const handleAuth = async () => {
-    if (user) {
-      await signOut();
-    } else {
-      await signInWithGoogle();
-    }
-  };
 
   return (
     <>
@@ -92,12 +76,14 @@ export function Sidebar({
                 </div>
                 <span className="text-lg font-semibold">Ideal Caravans</span>
               </div>
-              <Button onClick={handleAuth} variant="outline" size="sm">
-                {user ? 'Sign Out' : 'Sign In'}
-              </Button>
+              {user && (
+                <Button onClick={signOut} variant="outline" size="sm">
+                  Sign Out
+                </Button>
+              )}
             </div>
 
-            <ScrollArea className="flex-1">
+            <ScrollArea className="flex-1 overflow-auto">
               <div className="space-y-1 p-2">
                 {navigation.map((item) => {
                   const isActive = pathname === item.href;
@@ -167,9 +153,9 @@ export function Sidebar({
               <span className="text-lg font-semibold">Ideal Caravans</span>
             )}
           </div>
-          {!collapsed && (
-            <Button onClick={handleAuth} variant="outline" size="sm">
-              {user ? 'Sign Out' : 'Sign In'}
+          {!collapsed && user && (
+            <Button onClick={signOut} variant="outline" size="sm">
+              Sign Out
             </Button>
           )}
         </div>

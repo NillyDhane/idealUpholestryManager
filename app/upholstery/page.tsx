@@ -8,6 +8,8 @@ import { Menu } from "lucide-react";
 import { Template } from "@/app/components/template";
 import { cn } from "@/lib/utils";
 import AdminLayoutManager from "@/app/components/AdminLayoutManager";
+import PresetsLoader from "@/app/components/PresetsLoader";
+import type { UpholsteryOrder } from "@/app/lib/supabase";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +21,13 @@ import {
 export default function UpholsteryPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showAdminLayout, setShowAdminLayout] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<UpholsteryOrder | null>(null);
+
+  const handleTemplateSelect = (template: UpholsteryOrder) => {
+    setSelectedTemplate(template);
+    setShowTemplates(false);
+  };
 
   return (
     <div className="flex min-h-screen">
@@ -55,15 +64,23 @@ export default function UpholsteryPage() {
                     </p>
                   </div>
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowAdminLayout(true)}
-                >
-                  Admin Layout
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowTemplates(true)}
+                  >
+                    Load Template
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowAdminLayout(true)}
+                  >
+                    Admin Layout
+                  </Button>
+                </div>
               </div>
               <div className="pb-8">
-                <UpholsteryForm />
+                <UpholsteryForm preset={selectedTemplate} />
               </div>
             </div>
           </div>
@@ -80,6 +97,20 @@ export default function UpholsteryPage() {
           </DialogHeader>
           <div className="mt-4">
             <AdminLayoutManager onLayoutChange={() => setShowAdminLayout(false)} />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showTemplates} onOpenChange={setShowTemplates}>
+        <DialogContent className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Load Template</DialogTitle>
+            <DialogDescription>
+              Select a saved template to load its settings
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            <PresetsLoader onPresetSelect={handleTemplateSelect} />
           </div>
         </DialogContent>
       </Dialog>
