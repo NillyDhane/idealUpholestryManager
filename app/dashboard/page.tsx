@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { DataTable, VanData } from "@/app/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
+import { ImportantTasks } from "@/app/components/dashboard/important-tasks";
 
 interface DealerData {
   name: string;
@@ -307,86 +308,88 @@ export default function DashboardPage() {
                 })}
               </div>
 
-              <div className="px-0 lg:px-0">
-                {isDataReady && (
-                  <>
-                    <DealerChart data={dealerData} onVanSelect={fetchVanDetails} />
-                    <div className="mt-8">
-                      <h2 className="text-2xl font-bold tracking-tight mb-4">Production Status</h2>
-                      
-                      {/* Filter Controls */}
-                      <div className="space-y-4 mb-6">
-                        <div>
-                          <h3 className="text-sm font-medium mb-3 text-muted-foreground">Filter by Production Stage</h3>
-                          <div className="flex flex-wrap gap-2">
-                            {productionStages.map(stage => {
-                              const statusConfig = getStatusConfig(stage);
-                              return (
-                                <Badge
-                                  key={stage}
-                                  variant="outline"
-                                  className={cn(
-                                    "cursor-pointer transition-colors border-muted-foreground/30",
-                                    selectedStages.includes(stage) 
-                                      ? statusConfig.color
-                                      : "hover:bg-muted"
-                                  )}
-                                  onClick={() => toggleStage(stage)}
-                                >
-                                  <span className="flex items-center gap-1">
-                                    {statusConfig.icon}
-                                    {stage}
-                                  </span>
-                                </Badge>
-                              );
-                            })}
-                          </div>
-                        </div>
+              {isDataReady && (
+                <>
+                  <DealerChart data={dealerData} onVanSelect={fetchVanDetails} />
+                  
+                  {/* Important Tasks Section */}
+                  <ImportantTasks />
 
-                        <div>
-                          <h3 className="text-sm font-medium mb-3 text-muted-foreground">Filter by Location</h3>
-                          <div className="flex flex-wrap gap-2">
-                            {dealerLocations.map(location => (
+                  <div className="mt-8">
+                    <h2 className="text-2xl font-bold tracking-tight mb-4">Production Status</h2>
+                    
+                    {/* Filter Controls */}
+                    <div className="space-y-4 mb-6">
+                      <div>
+                        <h3 className="text-sm font-medium mb-3 text-muted-foreground">Filter by Production Stage</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {productionStages.map(stage => {
+                            const statusConfig = getStatusConfig(stage);
+                            return (
                               <Badge
-                                key={location}
-                                variant={selectedLocations.includes(location) ? "default" : "outline"}
+                                key={stage}
+                                variant="outline"
                                 className={cn(
-                                  "cursor-pointer transition-colors",
-                                  selectedLocations.includes(location) 
-                                    ? "hover:bg-primary/80" 
+                                  "cursor-pointer transition-colors border-muted-foreground/30",
+                                  selectedStages.includes(stage) 
+                                    ? statusConfig.color
                                     : "hover:bg-muted"
                                 )}
-                                onClick={() => toggleLocation(location)}
+                                onClick={() => toggleStage(stage)}
                               >
-                                {location}
+                                <span className="flex items-center gap-1">
+                                  {statusConfig.icon}
+                                  {stage}
+                                </span>
                               </Badge>
-                            ))}
-                          </div>
+                            );
+                          })}
                         </div>
-
-                        {(selectedStages.length > 0 || selectedLocations.length > 0) && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedStages([]);
-                              setSelectedLocations([]);
-                            }}
-                            className="text-xs"
-                          >
-                            Clear Filters
-                          </Button>
-                        )}
                       </div>
 
-                      <DataTable 
-                        data={filteredProductionData} 
-                        onVanSelect={fetchVanDetails} 
-                      />
+                      <div>
+                        <h3 className="text-sm font-medium mb-3 text-muted-foreground">Filter by Location</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {dealerLocations.map(location => (
+                            <Badge
+                              key={location}
+                              variant={selectedLocations.includes(location) ? "default" : "outline"}
+                              className={cn(
+                                "cursor-pointer transition-colors",
+                                selectedLocations.includes(location) 
+                                  ? "hover:bg-primary/80" 
+                                  : "hover:bg-muted"
+                              )}
+                              onClick={() => toggleLocation(location)}
+                            >
+                              {location}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+
+                      {(selectedStages.length > 0 || selectedLocations.length > 0) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedStages([]);
+                            setSelectedLocations([]);
+                          }}
+                          className="text-xs"
+                        >
+                          Clear Filters
+                        </Button>
+                      )}
                     </div>
-                  </>
-                )}
-              </div>
+
+                    <DataTable 
+                      data={filteredProductionData} 
+                      onVanSelect={fetchVanDetails} 
+                    />
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </Template>
