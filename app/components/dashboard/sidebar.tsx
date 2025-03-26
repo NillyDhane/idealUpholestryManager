@@ -36,13 +36,7 @@ export function Sidebar({
   collapsed: controlledCollapsed,
   onCollapsedChange,
 }: SidebarProps) {
-  const [uncontrolledCollapsed, setUncontrolledCollapsed] =
-    useState(defaultCollapsed);
-  const collapsed = controlledCollapsed ?? uncontrolledCollapsed;
-  const setCollapsed = (value: boolean) => {
-    setUncontrolledCollapsed(value);
-    onCollapsedChange?.(value);
-  };
+  const [activeItem, setActiveItem] = useState<string>("dashboard")
 
   const pathname = usePathname();
   const { user, signOut, isLoading } = useAuth();

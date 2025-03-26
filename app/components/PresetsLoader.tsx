@@ -15,13 +15,12 @@ export default function PresetsLoader({ onPresetSelect }: PresetsLoaderProps) {
   const [presets, setPresets] = useState<(UpholsteryOrder & { id: string })[]>(
     []
   );
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState<
     (UpholsteryOrder & { id: string }) | null
   >(null);
-  const [isClosingModal, setIsClosingModal] = useState(false);
 
   const loadPresets = async () => {
     try {
@@ -69,7 +68,7 @@ export default function PresetsLoader({ onPresetSelect }: PresetsLoaderProps) {
       console.error("Error loading presets:", error.message);
       setError("Failed to load presets. Please try again later.");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -83,17 +82,12 @@ export default function PresetsLoader({ onPresetSelect }: PresetsLoaderProps) {
   ) => {
     e.stopPropagation(); // Prevent triggering the preset selection
     setSelectedPreset(preset);
-    setShowDeleteModal(true);
-    setIsClosingModal(false);
+    setShowModal(true);
   };
 
   const handleCloseModal = () => {
-    setIsClosingModal(true);
-    setTimeout(() => {
-      setShowDeleteModal(false);
-      setSelectedPreset(null);
-      setIsClosingModal(false);
-    }, 300);
+    setShowModal(false);
+    setSelectedPreset(null);
   };
 
   const handleConfirmDelete = async () => {
@@ -119,7 +113,7 @@ export default function PresetsLoader({ onPresetSelect }: PresetsLoaderProps) {
 
   return (
     <div className="space-y-6">
-      {loading ? (
+      {isLoading ? (
         <div className="flex flex-col items-center justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           <p className="mt-4 text-sm text-muted-foreground">Loading presets...</p>
@@ -164,7 +158,7 @@ export default function PresetsLoader({ onPresetSelect }: PresetsLoaderProps) {
       )}
 
       {/* Delete Confirmation Modal */}
-      <Dialog open={showDeleteModal} onOpenChange={(open) => !open && handleCloseModal()}>
+      <Dialog open={showModal} onOpenChange={(open) => !open && handleCloseModal()}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Preset</DialogTitle>

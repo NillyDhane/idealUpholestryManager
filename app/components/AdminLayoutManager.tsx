@@ -12,6 +12,7 @@ import { Upload, Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { toast } from "react-hot-toast";
 
 interface AdminLayoutManagerProps {
   onLayoutChange?: () => void;
@@ -23,8 +24,6 @@ export default function AdminLayoutManager({
   const { user } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [layouts, setLayouts] = useState<StorageLayout[]>([]);
   const [editingLayout, setEditingLayout] = useState<string | null>(null);
@@ -191,6 +190,24 @@ export default function AdminLayoutManager({
       setError(err instanceof Error ? err.message : "Failed to rename file");
     }
   };
+
+  const handleSave = async () => {
+    try {
+      await saveLayout(layouts)
+      toast.success("Layout saved successfully")
+    } catch {
+      toast.error("Failed to save layout")
+    }
+  }
+
+  const handleReset = async () => {
+    try {
+      await resetLayout()
+      toast.success("Layout reset successfully")
+    } catch {
+      toast.error("Failed to reset layout")
+    }
+  }
 
   return (
     <div className="space-y-8">

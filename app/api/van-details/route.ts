@@ -1,10 +1,23 @@
 import { NextResponse } from "next/server";
-import { sheets } from "@/lib/googleSheets";
-import { SPREADSHEET_ID } from "@/lib/constants";
+import { google } from "googleapis";
+import { JWT } from "google-auth-library";
 
-interface VanData {
-  id: string;
-  [key: string]: string | number | boolean | null;
+interface VanDetails {
+  vanNumber: string;
+  customerName: string;
+  model: string;
+  benchtops: boolean;
+  doors: boolean;
+  upholstery: boolean;
+  chassis: boolean;
+  furniture: boolean;
+  comments: string;
+  chassisIn: string | null;
+  wallsUp: string | null;
+  building: string | null;
+  wiring: string | null;
+  cladding: string | null;
+  finishing: string | null;
 }
 
 export async function GET(request: Request) {
@@ -19,103 +32,68 @@ export async function GET(request: Request) {
       );
     }
 
-    console.log("Fetching van details for:", vanNumber);
-    console.log("Using spreadsheet ID:", SPREADSHEET_ID);
-
-    // Fetch the data from the SCHEDULE sheet
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: "SCHEDULE!A:S", // Columns A through S
+    const auth = new JWT({
+      email: process.env.GOOGLE_CLIENT_EMAIL,
+      key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+      scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
     });
 
-    console.log("Response received:", response.status);
+    const sheets = google.sheets({ version: "v4", auth });
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: process.env.SPREADSHEET_ID,
+      range: "Van Details!A:N",
+    });
 
     const rows = response.data.values;
-    if (!rows) {
-      throw new Error("No data found in sheet");
+    if (!rows || rows.length < 2) {
+      return NextResponse.json(
+        { error: "No data found" },
+        { status: 404 }
+      );
     }
 
-    // Find the row with matching van number
-    const headerRow = rows[0];
-    const normalizedSearchVan = vanNumber.replace(/\s+/g, ' ').trim();
-    const vanRow = rows.find((row) => {
-      if (!row[0]) return false;
-      const sheetVanNumber = row[0].toString().replace(/\s+/g, ' ').trim();
-      return sheetVanNumber === normalizedSearchVan;
-    });
+    const headers = rows[0];
+    const vanIndex = headers.indexOf("Van Number");
+    const customerNameIndex = headers.indexOf("Customer Name");
+    const modelIndex = headers.indexOf("Model");
+    const benchtopsIndex = headers.indexOf("Benchtops");
+    const doorsIndex = headers.indexOf("Doors");
+    const upholsteryIndex = headers.indexOf("Upholstery");
+    const chassisIndex = headers.indexOf("Chassis");
+    const furnitureIndex = headers.indexOf("Furniture");
+    const commentsIndex = headers.indexOf("Comments");
+    const chassisInIndex = headers.indexOf("Chassis In");
+    const wallsUpIndex = headers.indexOf("Walls Up");
+    const buildingIndex = headers.indexOf("Building");
+    const wiringIndex = headers.indexOf("Wiring");
+    const claddingIndex = headers.indexOf("Cladding");
+    const finishingIndex = headers.indexOf("Finishing");
 
+    const vanRow = rows.find((row) => row[vanIndex] === vanNumber);
     if (!vanRow) {
-      console.log("Van not found. Searched for:", normalizedSearchVan);
       return NextResponse.json(
         { error: "Van not found" },
         { status: 404 }
       );
     }
 
-    // Helper function to check if a cell has an X mark
-    const isComplete = (value: string) => {
-      return value?.toLowerCase() === "x";
+    const vanDetails: VanDetails = {
+      vanNumber: vanRow[vanIndex],
+      customerName: vanRow[customerNameIndex],
+      model: vanRow[modelIndex],
+      benchtops: vanRow[benchtopsIndex] === "TRUE",
+      doors: vanRow[doorsIndex] === "TRUE",
+      upholstery: vanRow[upholsteryIndex] === "TRUE",
+      chassis: vanRow[chassisIndex] === "TRUE",
+      furniture: vanRow[furnitureIndex] === "TRUE",
+      comments: vanRow[commentsIndex],
+      chassisIn: vanRow[chassisInIndex] || null,
+      wallsUp: vanRow[wallsUpIndex] || null,
+      building: vanRow[buildingIndex] || null,
+      wiring: vanRow[wiringIndex] || null,
+      cladding: vanRow[claddingIndex] || null,
+      finishing: vanRow[finishingIndex] || null,
     };
-
-    // Helper function to determine the most recent status
-    const getMostRecentStatus = (vanRow: any[], indices: any) => {
-      const statuses = [
-        { name: "Finishing", date: vanRow[indices.finishing] },
-        { name: "Cladding", date: vanRow[indices.cladding] },
-        { name: "Wiring", date: vanRow[indices.wiring] },
-        { name: "Building", date: vanRow[indices.building] },
-        { name: "Walls Up", date: vanRow[indices.wallsUp] },
-        { name: "Chassis In", date: vanRow[indices.chassisIn] }
-      ];
-
-      // Find the most recent status that has a date
-      const currentStatus = statuses.find(status => status.date);
-      return currentStatus ? currentStatus.name : "Not Started";
-    };
-
-    // Get the column indices
-    const columnIndices = {
-      vanNumber: 0,
-      customerName: headerRow.findIndex(col => col.toLowerCase().includes("customer")),
-      model: 3, // Column D contains the model
-      benchtops: 6, // Column G
-      doors: 7, // Column H
-      upholstery: 8, // Column I
-      chassis: 9, // Column J
-      furniture: 10, // Column K
-      comments: 11, // Column L
-      chassisIn: 13, // Column N
-      wallsUp: 14, // Column O
-      building: 15, // Column P
-      wiring: 16, // Column Q
-      cladding: 17, // Column R
-      finishing: 18, // Column S
-    };
-
-    // Construct the van details object
-    const vanDetails = {
-      vanNumber: vanRow[columnIndices.vanNumber],
-      customerName: vanRow[columnIndices.customerName],
-      model: vanRow[columnIndices.model] || "",
-      status: getMostRecentStatus(vanRow, columnIndices),
-      benchtops: isComplete(vanRow[columnIndices.benchtops]),
-      doors: isComplete(vanRow[columnIndices.doors]),
-      upholstery: isComplete(vanRow[columnIndices.upholstery]),
-      chassis: isComplete(vanRow[columnIndices.chassis]),
-      furniture: isComplete(vanRow[columnIndices.furniture]),
-      comments: vanRow[columnIndices.comments] || "",
-      chassisIn: vanRow[columnIndices.chassisIn] || null,
-      wallsUp: vanRow[columnIndices.wallsUp] || null,
-      building: vanRow[columnIndices.building] || null,
-      wiring: vanRow[columnIndices.wiring] || null,
-      cladding: vanRow[columnIndices.cladding] || null,
-      finishing: vanRow[columnIndices.finishing] || null,
-    };
-
-    // Special handling for Finishing status
-    if (!vanDetails.finishing && vanDetails.cladding) {
-      vanDetails.finishing = vanDetails.cladding;
-    }
 
     return NextResponse.json(vanDetails);
   } catch (error) {
@@ -127,6 +105,6 @@ export async function GET(request: Request) {
   }
 }
 
-async function updateVanDetails(vanId: string, updates: Partial<VanData>) {
+async function updateVanDetails(vanId: string, updates: Partial<VanDetails>) {
   // Implementation of updateVanDetails function
 } 

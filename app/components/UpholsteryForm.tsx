@@ -11,6 +11,14 @@ import { listLayouts } from "../lib/storage";
 import UpholsteryLayout from "./UpholsteryLayout";
 import { OrderSuccessModal } from "./ui/order-success-modal";
 import Image from "next/image";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 interface UpholsteryFormProps {
   onOrderSubmitted?: (order: UpholsteryOrder) => void;
@@ -34,9 +42,36 @@ export default function UpholsteryForm({
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [submittedOrder, setSubmittedOrder] = useState<UpholsteryOrder | null>(null);
   const [layouts, setLayouts] = useState<StorageLayout[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<FormData>({
+    resolver: zodResolver(z.object({
+      customerName: z.string().min(1, "Customer name is required"),
+      vanNumber: z.string().min(1, "Van number is required").regex(/^[0-9]+$/, "Van number must contain only numbers"),
+      model: z.string().min(1, "Model is required"),
+      modelType: z.string().min(1, "Model type is required"),
+      orderDate: z.string().min(1, "Order date is required"),
+      brandOfSample: z.string().min(1, "Brand of sample is required"),
+      colorOfSample: z.string().min(1, "Color of sample is required"),
+      bedHead: z.string().min(1, "Bed head is required"),
+      arms: z.string().min(1, "Arms are required"),
+      base: z.string().optional(),
+      magPockets: z.string().min(1, "Magazine pockets are required"),
+      headBumper: z.boolean(),
+      other: z.string().optional(),
+      loungeType: z.string().min(1, "Lounge type is required"),
+      design: z.string().min(1, "Design is required"),
+      curtain: z.boolean(),
+      stitching: z.string().min(1, "Stitching is required"),
+      bunkMattresses: z.string().min(1, "Bunk mattresses are required"),
+      layoutId: z.string().min(1, "Layout is required"),
+      layoutWidth: z.string().min(1, "Layout width is required"),
+      layoutLength: z.string().min(1, "Layout length is required"),
+      layoutName: z.string().min(1, "Layout name is required"),
+      layoutImageUrl: z.string().min(1, "Layout image URL is required"),
+    })),
     defaultValues: {
+      customerName: "",
       vanNumber: "",
       model: "",
       modelType: "",
@@ -47,11 +82,11 @@ export default function UpholsteryForm({
       arms: "Short",
       base: "",
       magPockets: "1 x Large",
-      headBumper: "true",
+      headBumper: true,
       other: "",
       loungeType: "Cafe",
       design: "Essential Back",
-      curtain: "Yes",
+      curtain: true,
       stitching: "Contrast",
       bunkMattresses: "None",
       layoutId: "",
@@ -120,6 +155,7 @@ export default function UpholsteryForm({
 
   const onSubmit = async (data: FormData) => {
     try {
+      setIsSubmitting(true);
       // Validate required fields
       if (!data.vanNumber || !data.model || !data.modelType || !data.brandOfSample || !data.colorOfSample) {
         alert("Please fill in all required fields");
@@ -188,6 +224,8 @@ export default function UpholsteryForm({
       // Reset form after successful submission
       reset();
       setSelectedLayout(null);
+
+      toast.success("Form submitted successfully");
     } catch (error: unknown) {
       console.error("Error submitting order:", error);
       if (error instanceof Error) {
@@ -195,6 +233,9 @@ export default function UpholsteryForm({
       } else {
         alert("An unexpected error occurred while submitting the order. Please try again.");
       }
+      toast.error("Failed to submit form");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -230,13 +271,7 @@ export default function UpholsteryForm({
                           }
                         }}
                         className="flex h-10 w-full rounded-md border border-input bg-background pl-16 pr-3 py-2 text-sm ring-offset-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        {...register("vanNumber", { 
-                          required: "Van number is required",
-                          pattern: {
-                            value: /^[0-9]+$/,
-                            message: "Van number must contain only numbers"
-                          }
-                        })}
+                        {...register("vanNumber")}
                       />
                       {errors.vanNumber && (
                         <p className="text-sm text-red-500 mt-1">{errors.vanNumber.message}</p>
@@ -255,7 +290,7 @@ export default function UpholsteryForm({
                       type="text"
                       id="model"
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                      {...register("model", { required: "Model is required" })}
+                      {...register("model")}
                     />
                     {errors.model && (
                       <p className="text-sm text-red-500 mt-1">{errors.model.message}</p>
@@ -273,7 +308,7 @@ export default function UpholsteryForm({
                       type="text"
                       id="modelType"
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                      {...register("modelType", { required: "Model type is required" })}
+                      {...register("modelType")}
                     />
                     {errors.modelType && (
                       <p className="text-sm text-red-500 mt-1">{errors.modelType.message}</p>
@@ -305,7 +340,7 @@ export default function UpholsteryForm({
                     <select
                       id="brandOfSample"
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                      {...register("brandOfSample", { required: "Brand of sample is required" })}
+                      {...register("brandOfSample")}
                     >
                       <option value="">Select a Brand</option>
                       {[...brands].map((brand) => (
@@ -330,7 +365,7 @@ export default function UpholsteryForm({
                       <select
                         id="colorOfSample"
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                        {...register("colorOfSample", { required: "Color of sample is required" })}
+                        {...register("colorOfSample")}
                       >
                         <option value="">Select a Color</option>
                         {brandColors[watchBrand as keyof typeof brandColors].map(
@@ -612,6 +647,7 @@ export default function UpholsteryForm({
             <button
               type="submit"
               className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+              disabled={isSubmitting}
             >
               Submit Order
             </button>
