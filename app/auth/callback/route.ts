@@ -1,6 +1,7 @@
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { ALLOWED_EMAILS } from "@/app/lib/auth-config";
 
 export const dynamic = 'force-dynamic'
 
@@ -25,7 +26,9 @@ export async function GET(request: Request) {
         return NextResponse.redirect(new URL('/login', requestUrl.origin));
       }
 
-      console.log('Auth Callback - User email:', session?.user?.email);
+      const userEmail = session.user.email;
+      console.log('Auth Callback - User email:', userEmail);
+      console.log('Auth Callback - Is email allowed:', ALLOWED_EMAILS.includes(userEmail!));
 
       // Set the session explicitly
       await supabase.auth.setSession({
@@ -33,8 +36,8 @@ export async function GET(request: Request) {
         refresh_token: session.refresh_token,
       });
 
-      // Create response with redirect
-      const response = NextResponse.redirect(new URL('/dashboard', requestUrl.origin));
+      // Create response with redirect to root
+      const response = NextResponse.redirect(new URL('/', requestUrl.origin));
 
       // Set auth cookies
       response.cookies.set('sb-access-token', session.access_token, {
