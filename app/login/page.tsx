@@ -1,46 +1,65 @@
 "use client"
 
-import { AuthForm } from "@/components/ui/auth-form"
-import { useRouter } from "next/navigation"
+import { Button } from "@/app/components/ui/button"
+import { Card } from "@/app/components/ui/card"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
 
 export default function LoginPage() {
   const router = useRouter()
   const supabase = createClientComponentClient()
 
-  const handleGoogleSignIn = async () => {
+  useEffect(() => {
+    console.log('\n=== Login Page Load ===')
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      console.log('Login Page - Current session:', session ? 'Present' : 'None')
+      if (session) {
+        console.log('Login Page - User email:', session.user.email)
+      }
+    }
+    checkSession()
+  }, [])
+
+  const handleGoogleLogin = async () => {
+    console.log('\n=== Google Login Attempt ===')
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          }
-        }
+        },
       })
-
       if (error) {
-        console.error("Error signing in with Google:", error)
-        return
+        console.error('Login Page - OAuth error:', error)
+        throw error
       }
-
-      if (data?.url) {
-        window.location.href = data.url
-      }
+      console.log('Login Page - OAuth redirect initiated')
     } catch (error) {
-      console.error("Error signing in with Google:", error)
+      console.error('Login Page - Login error:', error)
     }
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-background">
-      <div className="w-full max-w-[350px] p-4 space-y-6">
-        <AuthForm 
-          onGoogleSignIn={handleGoogleSignIn}
-        />
-      </div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/20 p-4">
+      <Card className="max-w-md w-full p-8 shadow-lg">
+        <div className="flex flex-col items-center text-center space-y-6">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight">Welcome Back</h1>
+            <p className="text-muted-foreground">
+              Sign in to your account to continue
+            </p>
+          </div>
+
+          <Button 
+            onClick={handleGoogleLogin}
+            className="w-full h-11 text-base"
+          >
+            Sign in with Google
+          </Button>
+        </div>
+      </Card>
     </div>
   )
 } 
