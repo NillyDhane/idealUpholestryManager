@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { useRouter } from "next/navigation"
 import { AuthForm } from "@/components/ui/auth-form"

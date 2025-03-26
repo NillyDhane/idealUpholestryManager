@@ -19,7 +19,7 @@ export default function UnauthorizedPage() {
       }
     };
     handleSignOut();
-  }, []);
+  }, [supabase.auth]);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4">

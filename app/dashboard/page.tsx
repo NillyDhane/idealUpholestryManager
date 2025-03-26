@@ -5,7 +5,7 @@ import { Sidebar } from "@/app/components/dashboard/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building2, Factory, Warehouse, Menu, AlertTriangle, CircleDot, SquareStack, Cable, Hammer, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import DealerChart from "@/app/components/ui/dealer-chart";
+import { DealerChart } from "@/app/components/ui/dealer-chart";
 import { Template } from "@/app/components/template";
 import { cn } from "@/lib/utils";
 import {
