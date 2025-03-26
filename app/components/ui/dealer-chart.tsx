@@ -14,6 +14,8 @@ import {
   Label,
   LabelList,
   CartesianGrid,
+  Area,
+  AreaChart,
 } from "recharts";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
@@ -25,18 +27,17 @@ import {
   CardHeader,
   CardTitle,
   CardFooter,
-} from "./card";
+} from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "./chart";
 import type { ChartConfig } from "./chart";
 import { DataTable, type VanData } from "./data-table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface DealerChartProps {
   data: Array<{
-    name: string;
-    count: number;
-    trend: number;
+    date: string;
+    value: number;
   }>;
-  onVanSelect?: (vanNumber: string) => void;
 }
 
 // Get color for each bar based on location
@@ -55,27 +56,27 @@ function getBarColor(location: string): string {
   }
 }
 
-const DealerChart: React.FC<DealerChartProps> = ({ data, onVanSelect }) => {
+export function DealerChart({ data }: DealerChartProps) {
   const { theme } = useTheme();
 
   // Transform data for the charts
   const chartData = data.map((item) => ({
-    location: item.name,
-    count: item.count,
-    fill: getBarColor(item.name),
+    location: item.date,
+    count: item.value,
+    fill: getBarColor(item.date),
   }));
 
   const pieData = data.map((item) => ({
-    name: item.name,
-    value: item.count,
-    fill: getBarColor(item.name),
+    name: item.date,
+    value: item.value,
+    fill: getBarColor(item.date),
   }));
 
   // Calculate total caravans
-  const total = data.reduce((sum, item) => sum + item.count, 0);
+  const total = data.reduce((sum, item) => sum + item.value, 0);
 
   // Calculate average trend
-  const avgTrend = data.reduce((sum, item) => sum + item.trend, 0) / data.length;
+  const avgTrend = data.reduce((sum, item) => sum + item.value, 0) / data.length;
 
   // Chart configurations
   const barChartConfig: ChartConfig = {
@@ -125,112 +126,66 @@ const DealerChart: React.FC<DealerChartProps> = ({ data, onVanSelect }) => {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="@container">
-          <CardHeader>
-            <CardTitle>Caravan Distribution</CardTitle>
-            <CardDescription>Total Caravans: {total}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={barChartConfig}>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart
-                  data={chartData}
-                  layout="vertical"
-                  margin={{
-                    top: 0,
-                    right: 50,
-                    left: 100,
-                    bottom: 0,
-                  }}
-                >
-                  <CartesianGrid horizontal={false} />
-                  <YAxis
-                    dataKey="location"
-                    type="category"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={10}
-                    hide
-                  />
-                  <XAxis type="number" hide />
-                  <Tooltip
-                    cursor={false}
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <div className="rounded-lg border bg-background p-2 shadow-sm">
-                            <div className="grid gap-2">
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="text-sm text-muted-foreground">
-                                  {payload[0].payload.location}
-                                </span>
-                                <span className="font-medium">
-                                  {payload[0].value} caravans
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Bar
-                    dataKey="count"
-                    fill="currentColor"
-                    radius={[4, 4, 4, 4]}
-                    maxBarSize={40}
-                  >
-                    <LabelList
-                      dataKey="location"
-                      position="left"
-                      offset={8}
-                      className="fill-foreground"
-                      fontSize={12}
-                    />
-                    <LabelList
-                      dataKey="count"
-                      position="right"
-                      offset={8}
-                      className="fill-foreground"
-                      fontSize={12}
-                    />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </CardContent>
-          <CardFooter className="flex-col items-start gap-2 text-sm">
-            <div className="leading-none text-muted-foreground">
-              Showing total caravans by location
-            </div>
-          </CardFooter>
-        </Card>
-
-        <Card className="@container">
-          <CardHeader className="items-center pb-2">
-            <CardTitle>Caravan Share</CardTitle>
-            <CardDescription>Distribution by Location</CardDescription>
-          </CardHeader>
-          <CardContent className="p-0 flex flex-col">
-            <div className="flex-1">
-              <ChartContainer config={pieChartConfig}>
+    <Card className="p-4">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold">Dealer Performance</h3>
+        <Select defaultValue="all">
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Select time period" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Time</SelectItem>
+            <SelectItem value="month">Last Month</SelectItem>
+            <SelectItem value="quarter">Last Quarter</SelectItem>
+            <SelectItem value="year">Last Year</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card className="@container">
+            <CardHeader>
+              <CardTitle>Caravan Distribution</CardTitle>
+              <CardDescription>Total Caravans: {total}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={barChartConfig}>
                 <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
+                  <BarChart
+                    data={chartData}
+                    layout="vertical"
+                    margin={{
+                      top: 0,
+                      right: 50,
+                      left: 100,
+                      bottom: 0,
+                    }}
+                  >
+                    <CartesianGrid horizontal={false} />
+                    <YAxis
+                      dataKey="location"
+                      type="category"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={10}
+                      hide
+                    />
+                    <XAxis type="number" hide />
                     <Tooltip
+                      cursor={false}
                       content={({ active, payload }) => {
                         if (active && payload && payload.length) {
                           return (
                             <div className="rounded-lg border bg-background p-2 shadow-sm">
-                              <div className="flex flex-col gap-1">
-                                <p className="text-sm font-medium">
-                                  {payload[0].name}
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                  {payload[0].value} caravans
-                                </p>
+                              <div className="grid gap-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-sm text-muted-foreground">
+                                    {payload[0].payload.location}
+                                  </span>
+                                  <span className="font-medium">
+                                    {payload[0].value} caravans
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           );
@@ -238,74 +193,141 @@ const DealerChart: React.FC<DealerChartProps> = ({ data, onVanSelect }) => {
                         return null;
                       }}
                     />
-                    <Pie
-                      data={pieData}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius="55%"
-                      outerRadius="75%"
-                      strokeWidth={5}
-                      cx="50%"
-                      cy="50%"
-                      startAngle={0}
-                      endAngle={360}
-                      animationBegin={0}
-                      animationDuration={2000}
-                      animateNewValues={true}
-                      isAnimationActive={true}
+                    <Bar
+                      dataKey="count"
+                      fill="currentColor"
+                      radius={[4, 4, 4, 4]}
+                      maxBarSize={40}
                     >
-                      <Label
-                        position="center"
-                        content={({ viewBox }) => {
-                          const { cx, cy } = viewBox ?? { cx: 0, cy: 0 };
-                          const fontSize = 24;
-                          const subTextSize = 14;
-                          return (
-                            <text
-                              x={cx}
-                              y={cy}
-                              textAnchor="middle"
-                              dominantBaseline="middle"
-                            >
-                              <tspan
-                                x={cx}
-                                y={cy - fontSize / 2}
-                                className="fill-foreground font-bold"
-                                style={{ fontSize }}
-                              >
-                                {total}
-                              </tspan>
-                              <tspan
-                                x={cx}
-                                y={cy + fontSize / 2}
-                                className="fill-muted-foreground"
-                                style={{ fontSize: subTextSize }}
-                              >
-                                Total Caravans
-                              </tspan>
-                            </text>
-                          );
-                        }}
+                      <LabelList
+                        dataKey="location"
+                        position="left"
+                        offset={8}
+                        className="fill-foreground"
+                        fontSize={12}
                       />
-                    </Pie>
-                  </PieChart>
+                      <LabelList
+                        dataKey="count"
+                        position="right"
+                        offset={8}
+                        className="fill-foreground"
+                        fontSize={12}
+                      />
+                    </Bar>
+                  </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>
-            </div>
-            <div className="px-6 py-2 flex flex-col items-center gap-1 text-sm border-t">
-              <div className="flex items-center gap-2 font-medium leading-none">
-                Average trend: {avgTrend.toFixed(1)}%{" "}
-                <TrendingUp className="h-4 w-4" />
-              </div>
+            </CardContent>
+            <CardFooter className="flex-col items-start gap-2 text-sm">
               <div className="leading-none text-muted-foreground">
-                Current distribution of caravans by location
+                Showing total caravans by location
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-};
+            </CardFooter>
+          </Card>
 
-export default DealerChart;
+          <Card className="@container">
+            <CardHeader className="items-center pb-2">
+              <CardTitle>Caravan Share</CardTitle>
+              <CardDescription>Distribution by Location</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0 flex flex-col">
+              <div className="flex-1">
+                <ChartContainer config={pieChartConfig}>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className="rounded-lg border bg-background p-2 shadow-sm">
+                                <div className="flex flex-col gap-1">
+                                  <p className="text-sm font-medium">
+                                    {payload[0].name}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {payload[0].value} caravans
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Pie
+                        data={pieData}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius="55%"
+                        outerRadius="75%"
+                        strokeWidth={5}
+                        cx="50%"
+                        cy="50%"
+                        startAngle={0}
+                        endAngle={360}
+                        animationBegin={0}
+                        animationDuration={2000}
+                        animateNewValues={true}
+                        isAnimationActive={true}
+                      >
+                        <Label
+                          position="center"
+                          content={({ viewBox }) => {
+                            const { cx, cy } = viewBox ?? { cx: 0, cy: 0 };
+                            const fontSize = 24;
+                            const subTextSize = 14;
+                            return (
+                              <text
+                                x={cx}
+                                y={cy}
+                                textAnchor="middle"
+                                dominantBaseline="middle"
+                              >
+                                <tspan
+                                  x={cx}
+                                  y={cy - fontSize / 2}
+                                  className="fill-foreground font-bold"
+                                  style={{ fontSize }}
+                                >
+                                  {total}
+                                </tspan>
+                                <tspan
+                                  x={cx}
+                                  y={cy + fontSize / 2}
+                                  className="fill-muted-foreground"
+                                  style={{ fontSize: subTextSize }}
+                                >
+                                  Total Caravans
+                                </tspan>
+                              </text>
+                            );
+                          }}
+                        />
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </div>
+              <div className="px-6 py-2 flex flex-col items-center gap-1 text-sm border-t">
+                <div className="flex items-center gap-2 font-medium leading-none">
+                  Average trend: {avgTrend.toFixed(1)}%{" "}
+                  <TrendingUp className="h-4 w-4" />
+                </div>
+                <div className="leading-none text-muted-foreground">
+                  Current distribution of caravans by location
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        <div className="h-[300px]">
+          <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="date" />
+            <Area type="monotone" dataKey="value" stroke="#8884d8" fill="#8884d8" fillOpacity={0.3} />
+          </AreaChart>
+        </div>
+      </div>
+    </Card>
+  );
+}

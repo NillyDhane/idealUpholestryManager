@@ -24,23 +24,6 @@ export function OrderSuccessModal({
   onClose,
   order,
 }: OrderSuccessModalProps) {
-  const handleDownload = async () => {
-    try {
-      const response = await fetch(order.layout_image_url);
-      const pdfBlob = await response.blob();
-      const downloadUrl = window.URL.createObjectURL(pdfBlob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = `order-${order.van_number}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(downloadUrl);
-    } catch (error) {
-      console.error('Error downloading PDF:', error);
-    }
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px]">
@@ -103,7 +86,7 @@ export function OrderSuccessModal({
             fileName={`upholstery-order-${order.van_number}.pdf`}
             className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
           >
-            {({ blob, url, loading, error }) => {
+            {({ loading, error }) => {
               if (loading) return 'Generating PDF...';
               if (error) return 'Error generating PDF';
               return 'Download PDF';

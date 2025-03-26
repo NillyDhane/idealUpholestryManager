@@ -6,8 +6,6 @@ import { useRouter } from "next/navigation"
 import { AuthForm } from "@/components/ui/auth-form"
 
 export default function SignUpPage() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
   const router = useRouter()
   const supabase = createClientComponentClient()
 
@@ -15,8 +13,8 @@ export default function SignUpPage() {
     e.preventDefault()
     try {
       const { error } = await supabase.auth.signUp({
-        email,
-        password,
+        email: "",
+        password: "",
         options: {
           emailRedirectTo: `${location.origin}/auth/callback`,
         },
@@ -30,7 +28,7 @@ export default function SignUpPage() {
 
   const handleGoogleSignIn = async () => {
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`
