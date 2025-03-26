@@ -103,8 +103,4 @@ export async function GET(request: Request) {
       { status: 500 }
     );
   }
-}
-
-async function updateVanDetails(vanId: string, updates: Partial<VanDetails>) {
-  // Implementation of updateVanDetails function
 } 

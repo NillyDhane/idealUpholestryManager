@@ -100,9 +100,6 @@ export default function UpholsteryForm({
   // Watch for changes in the brand field
   const watchBrand = watch("brandOfSample");
 
-  // Add this line to watch all form fields
-  const formValues = watch();
-
   // Memoize the layout selection function
   const handleLayoutSelect = useCallback((layout: StorageLayout) => {
     setSelectedLayout(layout);

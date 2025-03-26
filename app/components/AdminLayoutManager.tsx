@@ -43,7 +43,7 @@ export default function AdminLayoutManager({
         });
 
         if (error) {
-          setError("Error checking admin permissions");
+          toast.error("Error checking admin permissions");
           setIsLoading(false);
           return;
         }
@@ -54,14 +54,14 @@ export default function AdminLayoutManager({
           try {
             const layoutsList = await listLayouts();
             setLayouts(layoutsList);
-          } catch (err) {
-            setError("Error loading layouts");
+          } catch {
+            toast.error("Error loading layouts");
           }
         } else {
-          setError("You do not have admin permissions");
+          toast.error("You do not have admin permissions");
         }
-      } catch (err) {
-        setError("Error initializing admin panel");
+      } catch {
+        toast.error("Error initializing admin panel");
       } finally {
         setIsLoading(false);
       }
@@ -94,8 +94,6 @@ export default function AdminLayoutManager({
 
     try {
       setIsUploading(true);
-      setError(null);
-      setSuccess(null);
 
       // Validate file type
       if (!file.type.startsWith("image/")) {
@@ -108,15 +106,15 @@ export default function AdminLayoutManager({
       }
 
       await uploadLayoutImage(file);
-      setSuccess(`Successfully uploaded: ${file.name}`);
+      toast.success(`Successfully uploaded: ${file.name}`);
 
       // Refresh layouts list
       const updatedLayouts = await listLayouts();
       setLayouts(updatedLayouts);
 
       if (onLayoutChange) onLayoutChange();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to upload file");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to upload file");
     } finally {
       setIsUploading(false);
     }
@@ -128,16 +126,15 @@ export default function AdminLayoutManager({
     }
 
     try {
-      setError(null);
       await deleteLayoutImage(layout.path);
 
       // Remove from local state
       setLayouts(layouts.filter((l) => l.path !== layout.path));
 
-      setSuccess(`Successfully deleted: ${layout.name}`);
+      toast.success(`Successfully deleted: ${layout.name}`);
       if (onLayoutChange) onLayoutChange();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete file");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete file");
     }
   };
 
@@ -145,8 +142,6 @@ export default function AdminLayoutManager({
     if (!newName.trim()) return;
 
     try {
-      setError(null);
-
       // Get the file extension
       const fileExtension = layout.path.split(".").pop() || "";
 
@@ -182,35 +177,42 @@ export default function AdminLayoutManager({
       setLayouts(updatedLayouts);
       setEditingLayout(null);
       setNewName("");
-      setSuccess(`Successfully renamed to: ${newFileName}`);
+      toast.success(`Successfully renamed to: ${newFileName}`);
 
       if (onLayoutChange) onLayoutChange();
-    } catch (err) {
-      console.error("Error renaming file:", err);
-      setError(err instanceof Error ? err.message : "Failed to rename file");
+    } catch (error) {
+      console.error("Error renaming file:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to rename file");
     }
   };
 
   const handleSave = async () => {
     try {
-      await saveLayout(layouts)
-      toast.success("Layout saved successfully")
+      await saveLayout(layouts);
+      toast.success("Layout saved successfully");
     } catch {
-      toast.error("Failed to save layout")
+      toast.error("Failed to save layout");
     }
-  }
+  };
 
   const handleReset = async () => {
     try {
-      await resetLayout()
-      toast.success("Layout reset successfully")
+      await resetLayout();
+      toast.success("Layout reset successfully");
     } catch {
-      toast.error("Failed to reset layout")
+      toast.error("Failed to reset layout");
     }
-  }
+  };
 
   return (
     <div className="space-y-8">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-semibold">Admin Layout Manager</h2>
+        <div className="flex gap-2">
+          <Button onClick={handleSave}>Save Layout</Button>
+          <Button variant="outline" onClick={handleReset}>Reset Layout</Button>
+        </div>
+      </div>
       {/* Upload Section */}
       <div className={cn(
         "rounded-lg border bg-card p-6",
