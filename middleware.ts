@@ -11,8 +11,15 @@ export async function middleware(request: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession()
 
+  console.log('Middleware - Current path:', request.nextUrl.pathname)
+  console.log('Middleware - Session:', session ? 'Present' : 'None')
+  console.log('Middleware - User email:', session?.user?.email)
+  console.log('Middleware - Allowed emails:', ALLOWED_EMAILS)
+  console.log('Middleware - Is email allowed:', session?.user?.email ? ALLOWED_EMAILS.includes(session.user.email) : 'No session')
+
   // If there's no session and trying to access protected routes, redirect to login
   if (!session && !request.nextUrl.pathname.startsWith('/login')) {
+    console.log('Middleware - Redirecting to login (no session)')
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
@@ -20,6 +27,7 @@ export async function middleware(request: NextRequest) {
   if (session && !ALLOWED_EMAILS.includes(session.user.email!)) {
     // Only redirect to unauthorized if we're not already there
     if (!request.nextUrl.pathname.startsWith('/unauthorized')) {
+      console.log('Middleware - Redirecting to unauthorized (email not allowed)')
       return NextResponse.redirect(new URL('/unauthorized', request.url))
     }
   }
@@ -27,10 +35,12 @@ export async function middleware(request: NextRequest) {
   // If there's a session and email is allowed, allow access to all routes except login
   if (session && ALLOWED_EMAILS.includes(session.user.email!)) {
     if (request.nextUrl.pathname.startsWith('/login')) {
+      console.log('Middleware - Redirecting to home (authorized user on login page)')
       return NextResponse.redirect(new URL('/', request.url))
     }
   }
 
+  console.log('Middleware - Allowing access')
   return res
 }
 
