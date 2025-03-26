@@ -24,6 +24,23 @@ export function OrderSuccessModal({
   onClose,
   order,
 }: OrderSuccessModalProps) {
+  const handleDownload = async () => {
+    try {
+      const response = await fetch(order.layout_image_url);
+      const pdfBlob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `order-${order.van_number}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px]">

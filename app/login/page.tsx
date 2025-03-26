@@ -11,16 +11,14 @@ export default function LoginPage() {
   const supabase = createClientComponentClient()
 
   useEffect(() => {
-    console.log('\n=== Login Page Load ===')
-    const checkSession = async () => {
+    const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession()
-      console.log('Login Page - Current session:', session ? 'Present' : 'None')
       if (session) {
-        console.log('Login Page - User email:', session.user.email)
+        router.push("/dashboard")
       }
     }
-    checkSession()
-  }, [])
+    checkUser()
+  }, [router, supabase.auth])
 
   const handleGoogleLogin = async () => {
     console.log('\n=== Google Login Attempt ===')

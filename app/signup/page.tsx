@@ -1,11 +1,32 @@
 "use client"
 
-import { AuthForm } from "@/components/ui/auth-form"
+import { useState } from "react"
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase"
+import { AuthForm } from "@/components/ui/auth-form"
 
 export default function SignUpPage() {
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
   const router = useRouter()
+  const supabase = createClientComponentClient()
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${location.origin}/auth/callback`,
+        },
+      })
+      if (error) throw error
+      router.push("/login")
+    } catch (error) {
+      console.error("Error signing up:", error)
+    }
+  }
 
   const handleGoogleSignIn = async () => {
     try {
@@ -22,10 +43,6 @@ export default function SignUpPage() {
     } catch (error) {
       console.error("Error signing in with Google:", error)
     }
-  }
-
-  const handleSignUp = () => {
-    router.push("/login")
   }
 
   return (

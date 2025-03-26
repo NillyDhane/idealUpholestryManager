@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { X, Plus } from "lucide-react";
-import { Button } from "./button";
-import { Input } from "./input";
-import { Label } from "./label";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Checkbox } from "./checkbox";
 import { Textarea } from "./textarea";
 import { Switch } from "./switch";
@@ -15,12 +15,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "./dialog";
+} from "@/components/ui/dialog";
 
 interface NewEntryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: Record<string, string>) => void;
 }
 
 export function NewEntryModal({ isOpen, onClose, onSubmit }: NewEntryModalProps) {
