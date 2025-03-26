@@ -202,6 +202,7 @@ export const OrderPDF = ({ order }: { order: UpholsteryOrder }) => (
 
           <Image
             src={order.layout_image_url}
+            alt="Upholstery Layout"
             style={styles.layoutImage}
           />
 

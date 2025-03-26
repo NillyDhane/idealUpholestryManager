@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { sheets } from "@/lib/googleSheets";
 import { SPREADSHEET_ID } from "@/lib/constants";
 
+interface VanData {
+  id: string;
+  [key: string]: string | number | boolean | null;
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -120,4 +125,8 @@ export async function GET(request: Request) {
       { status: 500 }
     );
   }
+}
+
+async function updateVanDetails(vanId: string, updates: Partial<VanData>) {
+  // Implementation of updateVanDetails function
 } 
